@@ -14,6 +14,7 @@
             --bg: #f5f6fa;
         }
         
+        /* Tối ưu tràn màn hình điện thoại, chống cuộn thừa */
         html, body { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
@@ -36,7 +37,10 @@
             width: 100%; padding: 14px; margin: 8px 0; 
             font-size: 16px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; 
         }
-        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+        input:focus, select:focus { border-color: var(--accent); outline: none; }
+        
+        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:active { opacity: 0.9; }
         
         .admin-tabs { display: none; margin-bottom: 10px; gap: 5px; }
         .tab-btn { background: #dcdde1; color: #333; width: 50%; margin: 0; padding: 10px; font-size: 14px; }
@@ -44,46 +48,24 @@
         
         #main-app, #report-view, #group-select-container { display: none; }
         
-        /* HIỆU CHỈNH LẠI GIAO DIỆN QUÉT MÃ GỐC ĐỂ VỪA ĐẸP VỪA ỔN ĐỊNH */
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; border: 1px solid #eee !important; }
-        #reader video { border-radius: 12px; object-fit: cover; width: 100%; }
+        /* ẨN TOÀN BỘ CHỮ TIẾNG ANH THỪA CỦA THƯ VIỆN QR */
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; border: none !important; }
+        #reader__dashboard, #reader__camera_selection, #reader button { display: none !important; }
+        #reader video { border-radius: 12px; object-fit: cover; }
         
-        /* 1. Ẩn hoàn toàn các đường link linh tinh và chữ thừa */
-        #reader a { display: none !important; }
-        #reader span { font-size: 0 !important; } /* Ẩn chữ Select Camera */
-        
-        /* 2. Ẩn triệt để ô chọn Camera (Dropdown) và Nút Stop */
-        #reader select { display: none !important; }
-        #html5-qrcode-button-camera-stop { display: none !important; }
-        
-        /* 3. Làm đẹp nút bấm xin quyền và bắt đầu quét mặc định */
-        #reader button { 
-            background: var(--accent) !important; color: white !important; 
-            border: none !important; padding: 14px !important; 
-            border-radius: 10px !important; font-weight: bold !important; 
-            cursor: pointer !important; width: 100% !important; margin: 10px 0 !important;
-            font-size: 15px !important; text-transform: uppercase;
-        }
-
+        /* Ô tìm kiếm bằng tay gọn đẹp */
         .manual-box { display: flex; gap: 8px; margin-top: 15px; }
         .manual-box input { margin: 0; background: #f8f9fa; }
         .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); padding: 0 20px; }
         
-        /* POPUP Ở GIỮA MÀN HÌNH */
-        .modal-overlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;
-        }
-        .modal-box { 
-            background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; 
-            text-align: left; box-shadow: 0 15px 35px rgba(0,0,0,0.3); animation: modalShow 0.3s ease-out;
-        }
-        @keyframes modalShow { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal-box h3 { border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; text-align: center; color: var(--success); }
-        .modal-box p { margin: 12px 0; font-size: 16px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
-        .modal-box span { font-weight: bold; color: var(--primary); float: right; }
+        /* Popup thông tin */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index:999; justify-content:center; align-items:center; }
+        .modal-box { background: white; padding: 20px; border-radius: 16px; width: 85%; max-width: 340px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-box h3 { border-bottom: 2px solid #eee; padding-bottom: 8px; text-align: left; }
+        .modal-box p { margin: 10px 0; font-size: 15px; }
+        .modal-box span { font-weight: bold; color: var(--primary); }
         
-        /* BÁO CÁO ADMIN */
+        /* Báo cáo Admin */
         .grid-report { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
         .rep-item { background: #f8f9fa; padding: 10px; border-radius: 8px; border-left: 4px solid var(--primary); }
         .rep-item h4 { margin: 0 0 3px 0; font-size: 12px; color: #7f8c8d; }
@@ -91,11 +73,13 @@
         .rep-item.ok { border-left-color: var(--success); }
         .rep-item.err { border-left-color: var(--danger); }
         
-        .absent-wrapper { margin-top: 15px; background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #fbc4c4; max-height: 200px; overflow-y: auto;}
-        .absent-list { padding-left: 20px; margin: 5px 0 0 0; font-size: 14px;}
-        .absent-list li { margin-bottom: 10px; }
-        .copy-btn { width: auto; display: inline-block; padding: 4px 8px; margin-left: 5px; font-size: 11px; background: #34495e; color: white; border-radius: 4px; }
+        .absent-wrapper { margin-top: 15px; text-align: left; background: #fff5f5; padding: 12px; border-radius: 8px; border: 1px solid #fbc4c4; max-height: 250px; overflow-y: auto;}
+        .absent-list { padding-left: 18px; margin: 5px 0 0 0; font-size: 14px;}
+        .absent-list li { margin-bottom: 10px; color: #2c3e50; line-height: 1.4;}
+        .absent-list a { color: var(--danger); font-weight: bold; text-decoration: none; vertical-align: middle;}
+        .copy-btn { width: auto; display: inline-block; padding: 3px 6px; margin: 0 0 0 5px; font-size: 11px; background: #34495e; color: white; border-radius: 4px; vertical-align: middle;}
         
+        /* Nút đăng xuất luôn nằm cố định dưới cùng */
         .logout-btn { background: var(--danger); margin: 10px 0 0 0; font-size: 15px; padding: 12px; }
     </style>
 </head>
@@ -103,14 +87,15 @@
 
 <div class="card">
     <div class="top-content">
-        <div id="login-section">
-            <h2 style="color: var(--accent); margin-top: 20px;">HỆ THỐNG ĐIỂM DANH</h2>
+        <div id="login-section" style="margin-auto: 0;">
+            <h2 style="color: var(--accent); margin-bottom: 20px;">HỆ THỐNG ĐIỂM DANH</h2>
             <label>Loại tài khoản:</label>
             <select id="account-type" onchange="toggleAccountType(this.value)">
                 <option value="trung_nhom">Trưởng Nhóm (8 Chúng)</option>
                 <option value="admin">Quản Trị Viên (Admin)</option>
             </select>
-            <div id="group-select-container">
+            
+            <div id="group-select-container" style="display: block;">
                 <label>Chọn Chúng (Nhóm):</label>
                 <select id="group-name">
                     <option value="BỒ ĐỀ">BỒ ĐỀ</option><option value="LIÊN HOA">LIÊN HOA</option>
@@ -119,32 +104,32 @@
                     <option value="VÔ NGÃ">VÔ NGÃ</option><option value="VỊ THA">VỊ THA</option>
                 </select>
             </div>
+            
             <label>Mật khẩu:</label>
             <input type="password" id="password" placeholder="Nhập mật khẩu">
             <button onclick="handleLogin()" style="margin-top: 15px;">ĐĂNG NHẬP</button>
         </div>
 
         <div class="admin-tabs" id="admin-menu">
-            <button class="tab-btn active" id="btn-tab-scan" onclick="switchTab('scan')">Điểm Danh</button>
-            <button class="tab-btn" id="btn-tab-rep" onclick="switchTab('report')">Báo Cáo</button>
+            <button class="tab-btn active" id="btn-tab-scan" onclick="switchTab('scan')">Quét / Nhập Mã</button>
+            <button class="tab-btn" id="btn-tab-rep" onclick="switchTab('report')">Xem Báo Cáo</button>
         </div>
 
         <div id="main-app">
-            <p style="font-size: 13px; color:#7f8c8d; margin:5px 0 10px 0; text-align:center;">
-                Đang trực: <span id="user-display" style="font-weight:bold; color:var(--accent);"></span>
-            </p>
+            <h3 id="app-title" style="text-align:left; font-size: 18px; margin-bottom:2px;">Màn Hình Điểm Danh</h3>
+            <p style="font-size: 13px; color:#7f8c8d; margin:0 0 10px 0;">Tài khoản: <span id="user-display" style="font-weight:bold; color:var(--accent);"></span></p>
             
             <div id="reader"></div>
             
             <div class="manual-box">
-                <input type="text" id="manual-id" placeholder="Nhập mã thủ công...">
-                <button onclick="processCode(document.getElementById('manual-id').value)">TÌM</button>
+                <input type="text" id="manual-id" placeholder="Không quét được? Nhập mã vào đây...">
+                <button onclick="processCode(document.getElementById('manual-id').value)">Tìm</button>
             </div>
         </div>
 
         <div id="report-view">
-            <h3>THỐNG KÊ HÔM NAY</h3>
-            <button onclick="loadAdminReport()" style="background:#3498db; margin-bottom:10px;">Làm mới số liệu</button>
+            <h3>BÁO CÁO THỜI GIAN THỰC</h3>
+            <button onclick="loadAdminReport()" style="background:#3498db; margin:0 0 10px 0; padding:10px;">Cập nhật số liệu</button>
             <div class="grid-report" id="report-data"></div>
             <div id="absent-data"></div>
         </div>
@@ -155,30 +140,30 @@
 
 <div class="modal-overlay" id="confirm-modal">
     <div class="modal-box">
-        <h3>XÁC NHẬN</h3>
-        <p>Họ Tên: <span id="m-ten" style="color:var(--accent);"></span></p>
+        <h3 style="color: var(--success);">Thông Tin Khóa Sinh</h3>
         <p>Mã Số: <span id="m-ma"></span></p>
-        <p>Chúng: <span id="m-chung"></span></p>
+        <p>Họ Tên: <span id="m-ten" style="color:var(--accent); font-size:18px;"></span></p>
         <p>Ngày Sinh: <span id="m-ns"></span></p>
-        <div style="display:flex; gap:12px; margin-top:25px;">
-            <button onclick="closeModal()" style="background:#bdc3c7; color:#333; flex:1; margin:0;">HỦY</button>
-            <button onclick="submitAttendance()" style="background:var(--success); flex:1.5; margin:0;">XÁC NHẬN</button>
+        <p>Chúng: <span id="m-chung"></span></p>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="closeModal()" style="background:#bdc3c7; color:#333;">HỦY</button>
+            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN GHI</button>
         </div>
     </div>
 </div>
 
 <script>
-    // Link gốc Google Apps Script của bạn
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWhbVnxwDiPXk15Nr2cGyHfHgoRqQM4mCmIYGi0LbpiNrdOfQBcgc2JUWmhfSV04nnTg/exec';
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxIEPAzEsUq2UrjZ7UkmJF8sB4nAY2DWxHIB7CFNox1e469dC2XPKjPenysKb_KoarC3A/exec';
 
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
-    let html5QrcodeScanner; // Dùng lại bộ Scanner gốc có nút
+    let html5QrcodeScanner;
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem('loggedInUser');
         const savedRole = localStorage.getItem('userRole');
+        
         if (savedUser && savedRole) {
             loggedInUser = savedUser;
             userRole = savedRole;
@@ -193,13 +178,17 @@
     function handleLogin() {
         const type = document.getElementById('account-type').value;
         const pass = document.getElementById('password').value;
+        
         if (type === 'admin') {
-            if (pass === '12345@') { userRole = 'admin'; loggedInUser = 'Ban Quản Trị'; }
-            else { alert('Sai mật khẩu Admin!'); return; }
+            if (pass === 'admin123') {
+                userRole = 'admin'; loggedInUser = 'Ban Quản Trị';
+            } else { alert('Sai mật khẩu Admin!'); return; }
         } else {
-            if (pass === '12345') { userRole = 'leader'; loggedInUser = document.getElementById('group-name').value; }
-            else { alert('Sai mật khẩu Trưởng nhóm!'); return; }
+            if (pass === 'pass123') {
+                userRole = 'leader'; loggedInUser = "Trưởng nhóm " + document.getElementById('group-name').value;
+            } else { alert('Sai mật khẩu Trưởng nhóm!'); return; }
         }
+        
         localStorage.setItem('loggedInUser', loggedInUser);
         localStorage.setItem('userRole', userRole);
         showAppView();
@@ -208,14 +197,18 @@
     function showAppView() {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
-        document.getElementById('logout-section').style.display = 'block';
+        document.getElementById('logout-section').style.display = 'block'; // Hiện nút đăng xuất dưới đáy
         document.getElementById('user-display').innerText = loggedInUser;
-        if (userRole === 'admin') document.getElementById('admin-menu').style.display = 'flex';
+        
+        if (userRole === 'admin') {
+            document.getElementById('admin-menu').style.display = 'flex';
+        }
         startScanner();
     }
 
     function handleLogout() { 
-        localStorage.clear();
+        localStorage.removeItem('loggedInUser');
+        localStorage.removeItem('userRole');
         location.reload(); 
     }
 
@@ -228,12 +221,15 @@
     }
 
     function startScanner() {
-        // Khởi tạo bộ quét gốc có nút bấm
+        // Cấu hình ẩn nút bật tắt thủ công, mặc định ép dùng camera sau (environment)
         html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
             fps: 15, 
             qrbox: {width: 220, height: 220},
-            rememberLastUsedCamera: true
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
         }, false);
+        
+        // Kích hoạt camera ngay lập tức, tự xin quyền truy cập khi vừa mở
         html5QrcodeScanner.render((text) => processCode(text), () => {});
     }
 
@@ -260,8 +256,8 @@
                 if (html5QrcodeScanner) html5QrcodeScanner.resume();
             }
         })
-        .catch(() => {
-            alert("Lỗi kết nối!");
+        .catch(err => {
+            alert("Lỗi kết nối máy chủ!");
             if (html5QrcodeScanner) html5QrcodeScanner.resume();
         });
     }
@@ -283,14 +279,24 @@
             alert(data.message);
             closeModal();
         })
-        .catch(() => {
+        .catch(err => {
             alert("Lỗi ghi dữ liệu!");
             closeModal();
         });
     }
 
     function copyText(text) {
-        navigator.clipboard.writeText(text).then(() => alert("Đã copy SĐT: " + text));
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Đã copy SĐT: " + text);
+        }).catch(err => {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert("Đã copy SĐT: " + text);
+        });
     }
 
     function loadAdminReport() {
@@ -308,27 +314,44 @@
         .then(data => {
             if(data.status === "success") {
                 repDiv.innerHTML = `
-                    <div class="rep-item"><h4>Tổng Khóa Sinh</h4><p>${data.total}</p></div>
-                    <div class="rep-item err"><h4>Đi Muộn</h4><p>${data.muon}</p></div>
-                    <div class="rep-item ok"><h4>Đã Đến</h4><p>${data.den} (${data.pctDen}%)</p></div>
-                    <div class="rep-item err"><h4>Vắng Sáng</h4><p>${data.total - data.den} (${data.pctVang}%)</p></div>
+                    <div class="rep-item"><h4>Tổng Số Khóa Sinh</h4><p>${data.total} cháu</p></div>
+                    <div class="rep-item err"><h4>Tổng Số Đi Muộn</h4><p>${data.muon} cháu</p></div>
+                    <div class="rep-item ok"><h4>Đã Đến (Sáng)</h4><p>${data.den} (${data.pctDen}%)</p></div>
+                    <div class="rep-item err"><h4>Vắng (Sáng)</h4><p>${data.total - data.den} (${data.pctVang}%)</p></div>
+                    <div class="rep-item ok" style="grid-column: 1/3"><h4>Đã Về (Chiều)</h4><p>${data.ve} cháu (${data.pctVe}%)</p></div>
                 `;
 
                 let absentHtml = `
                     <div class="absent-wrapper">
-                        <h4 style="margin:0 0 10px 0; color:var(--danger); font-size:14px;">KHÓA SINH VẮNG MẶT:</h4>
+                        <h4 style="margin:0; font-size:13px; color:var(--danger);">DANH SÁCH KHÓA SINH VẮNG (SÁNG):</h4>
                         <ol class="absent-list">
                 `;
+                
                 if(data.absent && data.absent.length > 0) {
                     data.absent.forEach(student => {
-                        let sdt = String(student.sdt).trim();
-                        if (sdt && !sdt.startsWith('0')) sdt = '0' + sdt;
-                        absentHtml += `<li><strong>${student.ten}</strong> - ${student.chung}<br>SĐT: <a href="tel:${sdt}">${sdt}</a> <button class="copy-btn" onclick="copyText('${sdt}')">Copy</button></li>`;
+                        let sdtFormatted = student.sdt ? String(student.sdt).trim() : "";
+                        if (sdtFormatted && !sdtFormatted.startsWith('0') && !sdtFormatted.startsWith('+')) {
+                            sdtFormatted = '0' + sdtFormatted;
+                        }
+
+                        absentHtml += `
+                            <li>
+                                <strong>${student.ten}</strong> [Chúng: ${student.chung}] <br>
+                                Liên hệ: <a href="tel:${sdtFormatted}">${sdtFormatted}</a>
+                                <button class="copy-btn" onclick="copyText('${sdtFormatted}')">Copy</button>
+                            </li>
+                        `;
                     });
-                } else absentHtml += `<li>Không có ai vắng mặt.</li>`;
-                absDiv.innerHTML = absentHtml + `</ol></div>`;
-            }
-        });
+                } else {
+                    absentHtml += `<li>Hôm nay không có ai vắng mặt.</li>`;
+                }
+                
+                absentHtml += `</ol></div>`;
+                absDiv.innerHTML = absentHtml;
+
+            } else { repDiv.innerHTML = `<p style='color:red;'>${data.message}</p>`; }
+        })
+        .catch(err => { repDiv.innerHTML = "<p style='color:red;'>Lỗi tải báo cáo</p>"; });
     }
 </script>
 </body>
