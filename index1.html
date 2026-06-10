@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Điểm Danh Khóa Sinh</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f5f6fa; color: #333; }
+        .card { max-width: 420px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); box-sizing: border-box;}
+        h2, h3 { margin-top: 0; color: var(--primary); }
+        select, input, button { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:active { opacity: 0.9; }
+        
+        .admin-tabs { display: none; margin-bottom: 15px; }
+        .tab-btn { background: #dcdde1; color: #333; width: 49%; display: inline-block; margin: 0; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        
+        #main-app, #report-view, #group-select-container { display: none; }
+        #reader { width: 100%; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        
+        .manual-box { display: flex; gap: 5px; margin-top: 15px; }
+        .manual-box input { margin: 0; }
+        .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); }
+        
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index:999; justify-content:center; align-items:center; }
+        .modal-box { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 355px; text-align: left; }
+        .modal-box p { margin: 8px 0; font-size: 15px; }
+        .modal-box span { font-weight: bold; color: var(--primary); }
+        
+        .grid-report { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .rep-item { background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); }
+        .rep-item h4 { margin: 0 0 5px 0; font-size: 13px; color: #7f8c8d; }
+        .rep-item p { margin: 0; font-size: 18px; font-weight: bold; color: var(--primary); }
+        .rep-item.ok { border-left-color: var(--success); }
+        .rep-item.err { border-left-color: var(--danger); }
+
+        .absent-wrapper { margin-top: 20px; text-align: left; background: #fff5f5; padding: 15px; border-radius: 8px; border: 1px solid #fbc4c4;}
+        .absent-list { padding-left: 18px; margin: 8px 0 0 0; font-size: 15px;}
+        .absent-list li { margin-bottom: 12px; color: #2c3e50; line-height: 1.4;}
+        .absent-list a { color: var(--danger); font-weight: bold; text-decoration: none; vertical-align: middle;}
+        
+        .copy-btn { width: auto; display: inline-block; padding: 4px 8px; margin: 0 0 0 8px; font-size: 11px; background: #34495e; color: white; border-radius: 4px; vertical-align: middle;}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div id="login-section">
+        <h2 style="text-align:center; color: var(--accent);">ĐĂNG NHẬP</h2>
+        <label>Loại tài khoản:</label>
+        <select id="account-type" onchange="toggleAccountType(this.value)">
+            <option value="trung_nhom">Trưởng Nhóm (8 Chúng)</option>
+            <option value="admin">Quản Trị Viên (Admin)</option>
+        </select>
+        
+        <div id="group-select-container" style="display: block;">
+            <label>Chọn Chúng (Nhóm):</label>
+            <select id="group-name">
+                <option value="BỒ ĐỀ">BỒ ĐỀ</option><option value="LIÊN HOA">LIÊN HOA</option>
+                <option value="LỤC HÒA">LỤC HÒA</option><option value="TỈNH THỨC">TỈNH THỨC</option>
+                <option value="TỪ BI">TỪ BI</option><option value="TRÍ TUỆ">TRÍ TUỆ</option>
+                <option value="VÔ NGÃ">VÔ NGÃ</option><option value="VỊ THA">VỊ THA</option>
+            </select>
+        </div>
+        
+        <label>Mật khẩu:</label>
+        <input type="password" id="password" placeholder="Nhập mật khẩu">
+        <button onclick="handleLogin()">VÀO HỆ THỐNG</button>
+    </div>
+
+    <div class="admin-tabs" id="admin-menu">
+        <button class="tab-btn active" id="btn-tab-scan" onclick="switchTab('scan')">Quét / Nhập Mã</button>
+        <button class="tab-btn" id="btn-tab-rep" onclick="switchTab('report')">Xem Báo Cáo</button>
+    </div>
+
+    <div id="main-app">
+        <h3 id="app-title" style="margin-bottom:2px;">Màn Hình Điểm Danh</h3>
+        <p style="font-size: 13px; color:#7f8c8d; margin-top:0;">Tài khoản: <span id="user-display" style="font-weight:bold; color:var(--accent);"></span></p>
+        
+        <div id="reader"></div>
+        
+        <div class="manual-box">
+            <input type="text" id="manual-id" placeholder="Không quét được? Nhập mã tại đây...">
+            <button onclick="processCode(document.getElementById('manual-id').value)">Tìm</button>
+        </div>
+        
+        <button onclick="handleLogout()" style="background: var(--danger); margin-top:20px;">Đăng Xuất</button>
+    </div>
+
+    <div id="report-view">
+        <h3>BÁO CÁO THỜI GIAN THỰC</h3>
+        <button onclick="loadAdminReport()" style="background:#3498db; margin:0;">Cập nhật số liệu</button>
+        <div class="grid-report" id="report-data"></div>
+        <div id="absent-data"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box">
+        <h3 style="color: var(--success); border-bottom: 2px solid #eee; padding-bottom: 8px;">Thông Tin Khóa Sinh</h3>
+        <p>Mã Số: <span id="m-ma"></span></p>
+        <p>Họ Tên: <span id="m-ten" style="color:var(--accent); font-size:17px;"></span></p>
+        <p>Ngày Sinh: <span id="m-ns"></span></p>
+        <p>Chúng: <span id="m-chung"></span></p>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="closeModal()" style="background:#bdc3c7; color:#333;">HỦY</button>
+            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWhbVnxwDiPXk15Nr2cGyHfHgoRqQM4mCmIYGi0LbpiNrdOfQBcgc2JUWmhfSV04nnTg/exec';
+
+    let loggedInUser = "";
+    let userRole = "";
+    let currentScannedCode = "";
+    let html5QrcodeScanner;
+
+    // TỰ ĐỘNG KIỂM TRA TRẠNG THÁI ĐĂNG NHẬP KHI VỪA TẢI TRANG
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedUser = localStorage.getItem('loggedInUser');
+        const savedRole = localStorage.getItem('userRole');
+        
+        if (savedUser && savedRole) {
+            loggedInUser = savedUser;
+            userRole = savedRole;
+            
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            document.getElementById('user-display').innerText = loggedInUser;
+            
+            if (userRole === 'admin') {
+                document.getElementById('admin-menu').style.display = 'block';
+            }
+            startScanner();
+        }
+    });
+
+    function toggleAccountType(val) {
+        document.getElementById('group-select-container').style.display = (val === 'admin') ? 'none' : 'block';
+    }
+
+    function handleLogin() {
+        const type = document.getElementById('account-type').value;
+        const pass = document.getElementById('password').value;
+        
+        if (type === 'admin') {
+            if (pass === '12345@') {
+                userRole = 'admin'; loggedInUser = 'Ban Quản Trị';
+                document.getElementById('admin-menu').style.display = 'block';
+            } else { alert('Sai mật khẩu Admin!'); return; }
+        } else {
+            if (pass === '12345') {
+                userRole = 'leader'; loggedInUser = "Trưởng nhóm " + document.getElementById('group-name').value;
+            } else { alert('Sai mật khẩu Trưởng nhóm!'); return; }
+        }
+        
+        // LƯU TRẠNG THÁI ĐĂNG NHẬP VÀO TRÌNH DUYỆT
+        localStorage.setItem('loggedInUser', loggedInUser);
+        localStorage.setItem('userRole', userRole);
+
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        document.getElementById('user-display').innerText = loggedInUser;
+        startScanner();
+    }
+
+    // XÓA PHIÊN ĐĂNG NHẬP KHI ẤN NÚT ĐĂNG XUẤT
+    function handleLogout() { 
+        localStorage.removeItem('loggedInUser');
+        localStorage.removeItem('userRole');
+        location.reload(); 
+    }
+
+    function switchTab(tab) {
+        document.getElementById('btn-tab-scan').className = (tab === 'scan') ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('btn-tab-rep').className = (tab === 'report') ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('main-app').style.display = (tab === 'scan') ? 'block' : 'none';
+        document.getElementById('report-view').style.display = (tab === 'report') ? 'block' : 'none';
+        if (tab === 'report') loadAdminReport();
+    }
+
+    function startScanner() {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 230, height: 230} }, false);
+        html5QrcodeScanner.render((text) => processCode(text), () => {});
+    }
+
+    function processCode(code) {
+        if (!code || code.trim() === "") return;
+        currentScannedCode = code.trim();
+        if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getInfo", qr: currentScannedCode }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                document.getElementById('m-ma').innerText = data.student.ma;
+                document.getElementById('m-ten').innerText = data.student.ten;
+                document.getElementById('m-ns').innerText = data.student.ngaySinh;
+                document.getElementById('m-chung').innerText = data.student.chung;
+                document.getElementById('confirm-modal').style.display = 'flex';
+            } else {
+                alert(data.message);
+                if (html5QrcodeScanner) html5QrcodeScanner.resume();
+            }
+        })
+        .catch(err => {
+            alert("Lỗi kết nối!");
+            if (html5QrcodeScanner) html5QrcodeScanner.resume();
+        });
+    }
+
+    function closeModal() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        document.getElementById('manual-id').value = "";
+        if (html5QrcodeScanner) html5QrcodeScanner.resume();
+    }
+
+    function submitAttendance() {
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "confirm", qr: currentScannedCode, user: loggedInUser }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            closeModal();
+        })
+        .catch(err => {
+            alert("Lỗi ghi dữ liệu!");
+            closeModal();
+        });
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Đã copy SĐT: " + text);
+        }).catch(err => {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert("Đã copy SĐT: " + text);
+        });
+    }
+
+    function loadAdminReport() {
+        const repDiv = document.getElementById('report-data');
+        const absDiv = document.getElementById('absent-data');
+        repDiv.innerHTML = "<p style='grid-column:1/3; text-align:center;'>Đang tính toán số liệu...</p>";
+        absDiv.innerHTML = "";
+        
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "report" }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === "success") {
+                repDiv.innerHTML = `
+                    <div class="rep-item"><h4>Tổng Số Khóa Sinh</h4><p>${data.total} cháu</p></div>
+                    <div class="rep-item err"><h4>Tổng Số Đi Muộn</h4><p>${data.muon} cháu</p></div>
+                    <div class="rep-item ok"><h4>Đã Đến (Sáng)</h4><p>${data.den} (${data.pctDen}%)</p></div>
+                    <div class="rep-item err"><h4>Vắng (Sáng)</h4><p>${data.total - data.den} (${data.pctVang}%)</p></div>
+                    <div class="rep-item ok" style="grid-column: 1/3"><h4>Đã Về (Chiều)</h4><p>${data.ve} cháu (${data.pctVe}%)</p></div>
+                `;
+
+                let absentHtml = `
+                    <div class="absent-wrapper">
+                        <h4 style="margin:0; color:var(--danger);">DANH SÁCH KHÓA SINH VẮNG (SÁNG):</h4>
+                        <ol class="absent-list">
+                `;
+                
+                if(data.absent && data.absent.length > 0) {
+                    data.absent.forEach(student => {
+                        let sdtFormatted = student.sdt ? String(student.sdt).trim() : "";
+                        if (sdtFormatted && !sdtFormatted.startsWith('0') && !sdtFormatted.startsWith('+')) {
+                            sdtFormatted = '0' + sdtFormatted;
+                        }
+
+                        absentHtml += `
+                            <li>
+                                <strong>${student.ten}</strong> [Chúng: ${student.chung}] <br>
+                                Liên hệ: <a href="tel:${sdtFormatted}">${sdtFormatted}</a>
+                                <button class="copy-btn" onclick="copyText('${sdtFormatted}')">Copy</button>
+                            </li>
+                        `;
+                    });
+                } else {
+                    absentHtml += `<li>Thật tuyệt vời! Hôm nay không có ai vắng mặt.</li>`;
+                }
+                
+                absentHtml += `</ol></div>`;
+                absDiv.innerHTML = absentHtml;
+
+            } else { repDiv.innerHTML = `<p style='color:red;'>${data.message}</p>`; }
+        })
+        .catch(err => { repDiv.innerHTML = "<p style='color:red;'>Lỗi tải báo cáo</p>"; });
+    }
+</script>
+</body>
+</html>
