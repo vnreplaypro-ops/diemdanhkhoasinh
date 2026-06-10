@@ -115,6 +115,7 @@
             overflow: hidden; 
             margin-top: 15px; 
             border: 2px solid #e5e7eb;
+            background: #000;
         }
         
         .manual-box { 
@@ -126,13 +127,12 @@
         .manual-box input { margin: 0; flex: 1; }
         .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); padding: 0 20px;}
         
-        /* CẬP NHẬT CHÍNH: MODAL LUÔN Ở GIỮA VÀ ĐẸP HƠN */
         .modal-overlay { 
             display: none; 
             position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0; /* Khóa chặt 4 góc */
+            top: 0; left: 0; right: 0; bottom: 0; 
             background: rgba(0,0,0,0.55); 
-            backdrop-filter: blur(4px); /* Làm mờ nền phía sau */
+            backdrop-filter: blur(4px); 
             z-index: 9999; 
             justify-content: center; 
             align-items: center; 
@@ -171,6 +171,36 @@
             margin-top: 25px;
         }
         .modal-actions button { margin: 0; padding: 12px; }
+
+        #status-indicator {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px 0;
+        }
+
+        .spinner {
+            width: 40px; 
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        .success-mark {
+            display: none;
+            color: var(--success);
+            font-size: 20px;
+            font-weight: bold;
+            animation: popIn 0.3s ease-out;
+        }
 
         .grid-report { 
             display: grid; 
@@ -290,9 +320,14 @@
         <p>Ngày Sinh: <span id="m-ns"></span></p>
         <p>Chúng: <span id="m-chung"></span></p>
         
-        <div class="modal-actions">
-            <button onclick="closeModal()" style="background:#f1f2f6; color:#576574;">HỦY</button>
-            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN GHI</button>
+        <div class="modal-actions" id="modal-actions">
+            <button onclick="cancelModal()" style="background:#f1f2f6; color:#576574;">HỦY</button>
+            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN</button>
+        </div>
+
+        <div id="status-indicator">
+            <div class="spinner" id="spinner"></div>
+            <div class="success-mark" id="success-mark">✓ Đã ghi nhận thành công!</div>
         </div>
     </div>
 </div>
@@ -303,7 +338,8 @@
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
-    let html5QrcodeScanner;
+    let html5QrCode; // Đổi biến quản lý
+    let isProcessing = false; 
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem('loggedInUser');
@@ -332,8 +368,8 @@
         const type = document.getElementById('account-type').value;
         const pass = document.getElementById('password').value;
         
-        if (type === 'admin') {
-            if (pass === '12345@') {
+        if (type === '12345@') {
+            if (pass === 'admin123') {
                 userRole = 'admin'; loggedInUser = 'Ban Quản Trị';
                 document.getElementById('admin-menu').style.display = 'block';
             } else { alert('Sai mật khẩu Admin!'); return; }
@@ -361,20 +397,62 @@
     function switchTab(tab) {
         document.getElementById('btn-tab-scan').className = (tab === 'scan') ? 'tab-btn active' : 'tab-btn';
         document.getElementById('btn-tab-rep').className = (tab === 'report') ? 'tab-btn active' : 'tab-btn';
+        
         document.getElementById('main-app').style.display = (tab === 'scan') ? 'block' : 'none';
         document.getElementById('report-view').style.display = (tab === 'report') ? 'block' : 'none';
-        if (tab === 'report') loadAdminReport();
+        
+        // Quản lý việc bật/tắt camera khi chuyển tab
+        if (tab === 'report') {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log("Lỗi tắt camera:", err));
+            }
+            loadAdminReport();
+        } else {
+            startScanner();
+        }
     }
 
+    // GỌI TRỰC TIẾP CAMERA SAU THAY VÌ HIỆN BẢNG CHỌN
     function startScanner() {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 230, height: 230} }, false);
-        html5QrcodeScanner.render((text) => processCode(text), () => {});
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+        
+        html5QrCode.start(
+            { facingMode: "environment" }, // Ưu tiên gọi camera sau
+            {
+                fps: 10,
+                qrbox: { width: 230, height: 230 },
+                aspectRatio: 1.0 // Giúp khung hình vuông vắn đẹp hơn
+            },
+            (decodedText) => {
+                processCode(decodedText);
+            },
+            (errorMessage) => {
+                // Không hiển thị lỗi quét để tránh rác màn hình
+            }
+        ).catch((err) => {
+            console.error("Lỗi khởi tạo camera:", err);
+            document.getElementById("reader").innerHTML = `
+                <div style="padding: 20px; text-align: center; color: var(--danger); background: white;">
+                    Không thể mở Camera. Vui lòng cấp quyền truy cập Camera cho trình duyệt hoặc thử nhập mã thủ công.
+                </div>`;
+        });
+    }
+
+    function resetModalUI() {
+        document.getElementById('modal-actions').style.display = 'flex';
+        document.getElementById('status-indicator').style.display = 'none';
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('success-mark').style.display = 'none';
     }
 
     function processCode(code) {
-        if (!code || code.trim() === "") return;
+        if (isProcessing || !code || code.trim() === "") return;
+        isProcessing = true; 
         currentScannedCode = code.trim();
-        if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
+        
+        resetModalUI();
 
         fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
@@ -391,22 +469,31 @@
                 document.getElementById('confirm-modal').style.display = 'flex';
             } else {
                 alert(data.message);
-                if (html5QrcodeScanner) html5QrcodeScanner.resume();
+                setTimeout(() => { isProcessing = false; }, 1000);
             }
         })
         .catch(err => {
-            alert("Lỗi kết nối!");
-            if (html5QrcodeScanner) html5QrcodeScanner.resume();
+            alert("Lỗi kết nối khi tìm dữ liệu!");
+            setTimeout(() => { isProcessing = false; }, 1000);
         });
     }
 
-    function closeModal() {
+    function cancelModal() {
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
-        if (html5QrcodeScanner) html5QrcodeScanner.resume();
+        
+        setTimeout(() => {
+            isProcessing = false;
+            currentScannedCode = "";
+        }, 1000);
     }
 
     function submitAttendance() {
+        document.getElementById('modal-actions').style.display = 'none';
+        document.getElementById('status-indicator').style.display = 'block';
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('success-mark').style.display = 'none';
+
         fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "confirm", qr: currentScannedCode, user: loggedInUser }),
@@ -414,12 +501,16 @@
         })
         .then(res => res.json())
         .then(data => {
-            alert(data.message);
-            closeModal();
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('success-mark').style.display = 'block';
+            
+            setTimeout(() => {
+                cancelModal(); 
+            }, 1200);
         })
         .catch(err => {
-            alert("Lỗi ghi dữ liệu!");
-            closeModal();
+            alert("Lỗi ghi dữ liệu! Vui lòng thử lại.");
+            cancelModal();
         });
     }
 
