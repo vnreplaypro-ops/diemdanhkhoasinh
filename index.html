@@ -171,7 +171,7 @@
         }
         .modal-actions button { margin: 0; padding: 12px; }
 
-        /* HIỆU ỨNG LOADING VÀ THÀNH CÔNG */
+        /* HIỆU ỨNG LOADING VÀ THÀNH CÔNG CỦA POPUP */
         #status-indicator {
             display: none;
             text-align: center;
@@ -256,9 +256,30 @@
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
+
+        /* THANH THÔNG BÁO ĐỒNG BỘ DỮ LIỆU */
+        .sync-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #3498db;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 9999;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
+
+<div class="sync-banner" id="sync-banner">
+    Đang đồng bộ dữ liệu hệ thống... Vui lòng đợi giây lát!
+</div>
 
 <div class="card">
     <div id="login-section">
@@ -315,14 +336,22 @@
 <div class="modal-overlay" id="confirm-modal">
     <div class="modal-box">
         <h3>Thông Tin Khóa Sinh</h3>
-        <p>Mã Số: <span id="m-ma"></span></p>
-        <p>Họ Tên: <span id="m-ten" style="color:var(--accent); font-size:18px;"></span></p>
-        <p>Ngày Sinh: <span id="m-ns"></span></p>
-        <p>Chúng: <span id="m-chung"></span></p>
         
-        <div class="modal-actions" id="modal-actions">
+        <div id="loading-info" style="text-align: center; padding: 15px 0; display: none;">
+            <div class="spinner"></div>
+            <p style="display: block; text-align: center; margin-top: 15px; color: var(--accent); font-weight: bold;">Đang xử lý mã QR...</p>
+        </div>
+
+        <div id="student-info" style="display: none;">
+            <p>Mã Số: <span id="m-ma"></span></p>
+            <p>Họ Tên: <span id="m-ten" style="color:var(--accent); font-size:18px;"></span></p>
+            <p>Ngày Sinh: <span id="m-ns"></span></p>
+            <p>Chúng: <span id="m-chung"></span></p>
+        </div>
+        
+        <div class="modal-actions" id="modal-actions" style="display: none;">
             <button onclick="cancelModal()" style="background:#f1f2f6; color:#576574;">HỦY</button>
-            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN GHI</button>
+            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN</button>
         </div>
 
         <div id="status-indicator">
@@ -333,15 +362,20 @@
 </div>
 
 <script>
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWhbVnxwDiPXk15Nr2cGyHfHgoRqQM4mCmIYGi0LbpiNrdOfQBcgc2JUWmhfSV04nnTg/exec';
+    // THAY LINK SCRIPT CỦA BẠN VÀO ĐÂY
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKZXNR_w9W0h5kLaDEC_iiUdMokJQnKG-8OexeElClUm74p2bTiMn58gzigMAOcU2hcQ/exec';
 
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
     let html5QrcodeScanner;
     
-    // KHÓA PHẦN MỀM ĐỂ CHỐNG SPAM QUÉT / ĐƠ CAMERA
     let isProcessing = false; 
+    
+    // BIẾN CHO HỆ THỐNG CACHE VÀ LƯU NGẦM
+    let studentCache = {}; 
+    let unsyncedQueue = []; 
+    let isDataLoaded = false;
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem('loggedInUser');
@@ -358,6 +392,9 @@
             if (userRole === 'admin') {
                 document.getElementById('admin-menu').style.display = 'block';
             }
+            
+            // Tải dữ liệu Cache ngay lập tức
+            preloadData();
             startScanner();
         }
     });
@@ -387,6 +424,9 @@
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
         document.getElementById('user-display').innerText = loggedInUser;
+        
+        // Tải dữ liệu Cache ngay sau khi đăng nhập
+        preloadData();
         startScanner();
     }
 
@@ -394,6 +434,35 @@
         localStorage.removeItem('loggedInUser');
         localStorage.removeItem('userRole');
         location.reload(); 
+    }
+
+    // TẢI TRƯỚC TOÀN BỘ DỮ LIỆU ĐỂ QUÉT OFFLINE
+    function preloadData() {
+        document.getElementById('sync-banner').style.display = 'block';
+        
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getAll" }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === "success") {
+                studentCache = data.students; 
+                isDataLoaded = true;
+                document.getElementById('sync-banner').style.display = 'none';
+                console.log("Đã tải xong cache toàn bộ khóa sinh.");
+            } else {
+                alert("Lỗi tải danh sách khóa sinh: " + data.message);
+                document.getElementById('sync-banner').innerText = "Tải dữ liệu thất bại, vui lòng load lại trang!";
+                document.getElementById('sync-banner').style.background = "var(--danger)";
+            }
+        })
+        .catch(err => {
+            alert("Lỗi mạng khi đồng bộ dữ liệu. Vui lòng kiểm tra kết nối!");
+            document.getElementById('sync-banner').innerText = "Lỗi mạng, chưa thể tải dữ liệu!";
+            document.getElementById('sync-banner').style.background = "var(--danger)";
+        });
     }
 
     function switchTab(tab) {
@@ -405,87 +474,85 @@
     }
 
     function startScanner() {
-        // Tắt tính năng tự động pause của thư viện, ta sẽ kiểm soát bằng biến isProcessing
         html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 230, height: 230} }, false);
         html5QrcodeScanner.render((text) => processCode(text), () => {});
     }
 
-    function resetModalUI() {
-        document.getElementById('modal-actions').style.display = 'flex';
-        document.getElementById('status-indicator').style.display = 'none';
-        document.getElementById('spinner').style.display = 'block';
-        document.getElementById('success-mark').style.display = 'none';
-    }
-
     function processCode(code) {
-        // Dùng khóa phần mềm: Nếu đang xử lý hoặc code trống thì bỏ qua (tránh đơ camera)
         if (isProcessing || !code || code.trim() === "") return;
+        
+        if (!isDataLoaded) {
+            alert("Vui lòng chờ vài giây để hệ thống tải dữ liệu xong trước khi quét!");
+            return;
+        }
+
         isProcessing = true; 
         currentScannedCode = code.trim();
         
-        resetModalUI();
+        // KIỂM TRA NHANH TRONG CACHE (0 GIÂY)
+        const student = studentCache[currentScannedCode];
 
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "getInfo", qr: currentScannedCode }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === "success") {
-                document.getElementById('m-ma').innerText = data.student.ma;
-                document.getElementById('m-ten').innerText = data.student.ten;
-                document.getElementById('m-ns').innerText = data.student.ngaySinh;
-                document.getElementById('m-chung').innerText = data.student.chung;
-                document.getElementById('confirm-modal').style.display = 'flex';
-            } else {
-                alert(data.message);
-                setTimeout(() => { isProcessing = false; }, 1000);
-            }
-        })
-        .catch(err => {
-            alert("Lỗi kết nối khi tìm dữ liệu!");
+        if (student) {
+            // Điền dữ liệu và bật Popup ngay lập tức
+            document.getElementById('m-ma').innerText = student.ma;
+            document.getElementById('m-ten').innerText = student.ten;
+            document.getElementById('m-ns').innerText = student.ngaySinh;
+            document.getElementById('m-chung').innerText = student.chung;
+
+            document.getElementById('confirm-modal').style.display = 'flex';
+            document.getElementById('loading-info').style.display = 'none';
+            document.getElementById('student-info').style.display = 'block';
+            document.getElementById('modal-actions').style.display = 'flex';
+            document.getElementById('status-indicator').style.display = 'none';
+        } else {
+            alert("Mã này không có trong hệ thống hoặc file lỗi!");
             setTimeout(() => { isProcessing = false; }, 1000);
-        });
+        }
     }
 
     function cancelModal() {
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
         
-        // Nghỉ 1 giây rồi mới cho phép quét tiếp để chống chạm đúp
         setTimeout(() => {
             isProcessing = false;
             currentScannedCode = "";
-        }, 1000);
+        }, 500);
     }
 
     function submitAttendance() {
-        // Ẩn nút, hiện loading
-        document.getElementById('modal-actions').style.display = 'none';
-        document.getElementById('status-indicator').style.display = 'block';
-        document.getElementById('spinner').style.display = 'block';
-        document.getElementById('success-mark').style.display = 'none';
+        const qrToSave = currentScannedCode;
+        const user = loggedInUser;
 
+        // 1. ĐÓNG MODAL VÀ XẢ KHÓA NGAY LẬP TỨC ĐỂ QUÉT NGƯỜI TIẾP THEO
+        document.getElementById('confirm-modal').style.display = 'none';
+        document.getElementById('manual-id').value = "";
+        
+        // Nghỉ 0.4s để tránh quét đúp người cũ
+        setTimeout(() => { 
+            isProcessing = false; 
+            currentScannedCode = "";
+        }, 400); 
+
+        // 2. CHẠY NGẦM FETCH ĐỂ LƯU DỮ LIỆU
         fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "confirm", qr: currentScannedCode, user: loggedInUser }),
+            body: JSON.stringify({ action: "confirm", qr: qrToSave, user: user }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         })
         .then(res => res.json())
         .then(data => {
-            // Tắt loading, hiện tích xanh
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('success-mark').style.display = 'block';
-            
-            // Tự động đóng popup sau 1.2 giây
-            setTimeout(() => {
-                cancelModal(); 
-            }, 1200);
+            if(data.status === "success" || data.status === "already") {
+                console.log(`Đã lưu / Đã điểm danh: ${qrToSave}`);
+            } else {
+                console.error(`Lỗi khi lưu ${qrToSave}:`, data.message);
+                unsyncedQueue.push(qrToSave);
+            }
         })
         .catch(err => {
-            alert("Lỗi ghi dữ liệu! Vui lòng thử lại.");
-            cancelModal();
+            console.error(`Rớt mạng, không thể lưu ${qrToSave}.`);
+            // Đẩy vào hàng chờ nếu mất mạng
+            unsyncedQueue.push(qrToSave);
         });
     }
 
