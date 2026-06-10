@@ -115,7 +115,6 @@
             overflow: hidden; 
             margin-top: 15px; 
             border: 2px solid #e5e7eb;
-            background: #000;
         }
         
         .manual-box { 
@@ -172,6 +171,7 @@
         }
         .modal-actions button { margin: 0; padding: 12px; }
 
+        /* HIỆU ỨNG LOADING VÀ THÀNH CÔNG */
         #status-indicator {
             display: none;
             text-align: center;
@@ -322,7 +322,7 @@
         
         <div class="modal-actions" id="modal-actions">
             <button onclick="cancelModal()" style="background:#f1f2f6; color:#576574;">HỦY</button>
-            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN</button>
+            <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN GHI</button>
         </div>
 
         <div id="status-indicator">
@@ -338,7 +338,9 @@
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
-    let html5QrCode; // Đổi biến quản lý
+    let html5QrcodeScanner;
+    
+    // KHÓA PHẦN MỀM ĐỂ CHỐNG SPAM QUÉT / ĐƠ CAMERA
     let isProcessing = false; 
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -368,8 +370,8 @@
         const type = document.getElementById('account-type').value;
         const pass = document.getElementById('password').value;
         
-        if (type === '12345@') {
-            if (pass === 'admin123') {
+        if (type === 'admin') {
+            if (pass === '123456') {
                 userRole = 'admin'; loggedInUser = 'Ban Quản Trị';
                 document.getElementById('admin-menu').style.display = 'block';
             } else { alert('Sai mật khẩu Admin!'); return; }
@@ -397,47 +399,15 @@
     function switchTab(tab) {
         document.getElementById('btn-tab-scan').className = (tab === 'scan') ? 'tab-btn active' : 'tab-btn';
         document.getElementById('btn-tab-rep').className = (tab === 'report') ? 'tab-btn active' : 'tab-btn';
-        
         document.getElementById('main-app').style.display = (tab === 'scan') ? 'block' : 'none';
         document.getElementById('report-view').style.display = (tab === 'report') ? 'block' : 'none';
-        
-        // Quản lý việc bật/tắt camera khi chuyển tab
-        if (tab === 'report') {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(err => console.log("Lỗi tắt camera:", err));
-            }
-            loadAdminReport();
-        } else {
-            startScanner();
-        }
+        if (tab === 'report') loadAdminReport();
     }
 
-    // GỌI TRỰC TIẾP CAMERA SAU THAY VÌ HIỆN BẢNG CHỌN
     function startScanner() {
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("reader");
-        }
-        
-        html5QrCode.start(
-            { facingMode: "environment" }, // Ưu tiên gọi camera sau
-            {
-                fps: 10,
-                qrbox: { width: 230, height: 230 },
-                aspectRatio: 1.0 // Giúp khung hình vuông vắn đẹp hơn
-            },
-            (decodedText) => {
-                processCode(decodedText);
-            },
-            (errorMessage) => {
-                // Không hiển thị lỗi quét để tránh rác màn hình
-            }
-        ).catch((err) => {
-            console.error("Lỗi khởi tạo camera:", err);
-            document.getElementById("reader").innerHTML = `
-                <div style="padding: 20px; text-align: center; color: var(--danger); background: white;">
-                    Không thể mở Camera. Vui lòng cấp quyền truy cập Camera cho trình duyệt hoặc thử nhập mã thủ công.
-                </div>`;
-        });
+        // Tắt tính năng tự động pause của thư viện, ta sẽ kiểm soát bằng biến isProcessing
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 230, height: 230} }, false);
+        html5QrcodeScanner.render((text) => processCode(text), () => {});
     }
 
     function resetModalUI() {
@@ -448,6 +418,7 @@
     }
 
     function processCode(code) {
+        // Dùng khóa phần mềm: Nếu đang xử lý hoặc code trống thì bỏ qua (tránh đơ camera)
         if (isProcessing || !code || code.trim() === "") return;
         isProcessing = true; 
         currentScannedCode = code.trim();
@@ -482,6 +453,7 @@
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
         
+        // Nghỉ 1 giây rồi mới cho phép quét tiếp để chống chạm đúp
         setTimeout(() => {
             isProcessing = false;
             currentScannedCode = "";
@@ -489,6 +461,7 @@
     }
 
     function submitAttendance() {
+        // Ẩn nút, hiện loading
         document.getElementById('modal-actions').style.display = 'none';
         document.getElementById('status-indicator').style.display = 'block';
         document.getElementById('spinner').style.display = 'block';
@@ -501,9 +474,11 @@
         })
         .then(res => res.json())
         .then(data => {
+            // Tắt loading, hiện tích xanh
             document.getElementById('spinner').style.display = 'none';
             document.getElementById('success-mark').style.display = 'block';
             
+            // Tự động đóng popup sau 1.2 giây
             setTimeout(() => {
                 cancelModal(); 
             }, 1200);
