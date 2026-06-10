@@ -44,43 +44,24 @@
         
         #main-app, #report-view, #group-select-container { display: none; }
         
-        /* HIỆU CHỈNH CAMERA */
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; border: none !important; }
-        #reader__dashboard, #reader__camera_selection, #reader button { display: none !important; }
-        #reader video { border-radius: 12px; object-fit: cover; }
+        /* CSS CHO CAMERA TRỰC TIẾP */
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; background: #000; display: flex; align-items: center; justify-content: center; min-height: 250px;}
+        #reader video { border-radius: 12px; object-fit: cover; width: 100% !important; height: auto !important;}
         
         .manual-box { display: flex; gap: 8px; margin-top: 15px; }
         .manual-box input { margin: 0; background: #f8f9fa; }
         .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); padding: 0 20px; }
         
-        /* POPUP XÁC NHẬN Ở GIỮA MÀN HÌNH */
+        /* POPUP XÁC NHẬN CHUẨN GIỮA MÀN HÌNH */
         .modal-overlay { 
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.7); /* Làm tối nền */
-            z-index: 9999; 
-            justify-content: center; /* Căn giữa ngang */
-            align-items: center;     /* Căn giữa dọc */
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;
         }
-        
         .modal-box { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 20px; 
-            width: 85%; 
-            max-width: 320px; 
-            text-align: left; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            animation: modalShow 0.3s ease-out; /* Hiệu ứng hiện ra */
+            background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; 
+            text-align: left; box-shadow: 0 15px 35px rgba(0,0,0,0.3); animation: modalShow 0.3s ease-out;
         }
-
-        @keyframes modalShow {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
+        @keyframes modalShow { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-box h3 { border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; text-align: center; color: var(--success); }
         .modal-box p { margin: 12px 0; font-size: 16px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
         .modal-box span { font-weight: bold; color: var(--primary); float: right; }
@@ -173,7 +154,7 @@
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
-    let html5QrcodeScanner;
+    let html5QrCode; // Đổi biến để dùng lõi trực tiếp
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem('loggedInUser');
@@ -210,6 +191,8 @@
         document.getElementById('logout-section').style.display = 'block';
         document.getElementById('user-display').innerText = loggedInUser;
         if (userRole === 'admin') document.getElementById('admin-menu').style.display = 'flex';
+        
+        // Gọi thẳng lệnh khởi động Camera khi vừa vào view
         startScanner();
     }
 
@@ -227,17 +210,27 @@
     }
 
     function startScanner() {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 15, qrbox: {width: 220, height: 220},
-            rememberLastUsedCamera: true
-        }, false);
-        html5QrcodeScanner.render((text) => processCode(text), () => {});
+        // Dùng API trực tiếp ép trình duyệt mở camera sau
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" }, // Bắt buộc dùng camera sau
+            { fps: 15, qrbox: { width: 220, height: 220 } },
+            (decodedText) => { processCode(decodedText); }, // Khi có mã thì gọi hàm
+            (errorMessage) => { /* Bỏ qua các khung hình không thấy mã */ }
+        ).catch((err) => {
+            alert("Vui lòng Cấp Quyền sử dụng Camera cho trình duyệt để có thể quét mã!");
+            console.log("Camera error:", err);
+        });
     }
 
     function processCode(code) {
         if (!code || code.trim() === "") return;
         currentScannedCode = code.trim();
-        if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
+        
+        // Tạm dừng camera khi đang xử lý
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.pause();
+        }
 
         fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
@@ -254,19 +247,19 @@
                 document.getElementById('confirm-modal').style.display = 'flex';
             } else {
                 alert(data.message);
-                if (html5QrcodeScanner) html5QrcodeScanner.resume();
+                if (html5QrCode) html5QrCode.resume();
             }
         })
         .catch(() => {
             alert("Lỗi kết nối!");
-            if (html5QrcodeScanner) html5QrcodeScanner.resume();
+            if (html5QrCode) html5QrCode.resume();
         });
     }
 
     function closeModal() {
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
-        if (html5QrcodeScanner) html5QrcodeScanner.resume();
+        if (html5QrCode) html5QrCode.resume(); // Bật lại camera
     }
 
     function submitAttendance() {
