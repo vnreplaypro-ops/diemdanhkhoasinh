@@ -496,7 +496,22 @@
             // Điền dữ liệu và bật Popup ngay lập tức
             document.getElementById('m-ma').innerText = student.ma;
             document.getElementById('m-ten').innerText = student.ten;
-            document.getElementById('m-ns').innerText = student.ngaySinh;
+
+            // Xử lý làm sạch ngày sinh (Cắt bỏ giờ/phút/giây)
+            let rawDate = String(student.ngaySinh || "");
+            let cleanDate = rawDate;
+
+            if (rawDate.includes("T")) {
+                // Xử lý nếu Google trả về dạng ISO (VD: 2010-05-15T00:00:00.000Z)
+                let datePart = rawDate.split("T")[0]; // Lấy phần "2010-05-15"
+                let p = datePart.split("-");
+                if (p.length === 3) cleanDate = p[2] + "/" + p[1] + "/" + p[0]; // Đảo lại thành DD/MM/YYYY
+            } else if (rawDate.includes(" ")) {
+                // Xử lý nếu định dạng Text Excel dư khoảng trắng (VD: "15/05/2010 00:00:00")
+                cleanDate = rawDate.split(" ")[0];
+            }
+
+            document.getElementById('m-ns').innerText = cleanDate;
             document.getElementById('m-chung').innerText = student.chung;
 
             document.getElementById('confirm-modal').style.display = 'flex';
