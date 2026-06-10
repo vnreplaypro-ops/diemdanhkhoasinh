@@ -44,15 +44,32 @@
         
         #main-app, #report-view, #group-select-container { display: none; }
         
-        /* CSS CHO CAMERA TRỰC TIẾP */
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; background: #000; display: flex; align-items: center; justify-content: center; min-height: 250px;}
-        #reader video { border-radius: 12px; object-fit: cover; width: 100% !important; height: auto !important;}
+        /* HIỆU CHỈNH LẠI GIAO DIỆN QUÉT MÃ GỐC ĐỂ VỪA ĐẸP VỪA ỔN ĐỊNH */
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 5px; border: 1px solid #eee !important; }
+        #reader video { border-radius: 12px; object-fit: cover; width: 100%; }
         
+        /* 1. Ẩn hoàn toàn các đường link linh tinh và chữ thừa */
+        #reader a { display: none !important; }
+        #reader span { font-size: 0 !important; } /* Ẩn chữ Select Camera */
+        
+        /* 2. Ẩn triệt để ô chọn Camera (Dropdown) và Nút Stop */
+        #reader select { display: none !important; }
+        #html5-qrcode-button-camera-stop { display: none !important; }
+        
+        /* 3. Làm đẹp nút bấm xin quyền và bắt đầu quét mặc định */
+        #reader button { 
+            background: var(--accent) !important; color: white !important; 
+            border: none !important; padding: 14px !important; 
+            border-radius: 10px !important; font-weight: bold !important; 
+            cursor: pointer !important; width: 100% !important; margin: 10px 0 !important;
+            font-size: 15px !important; text-transform: uppercase;
+        }
+
         .manual-box { display: flex; gap: 8px; margin-top: 15px; }
         .manual-box input { margin: 0; background: #f8f9fa; }
         .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); padding: 0 20px; }
         
-        /* POPUP XÁC NHẬN CHUẨN GIỮA MÀN HÌNH */
+        /* POPUP Ở GIỮA MÀN HÌNH */
         .modal-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;
@@ -116,7 +133,9 @@
             <p style="font-size: 13px; color:#7f8c8d; margin:5px 0 10px 0; text-align:center;">
                 Đang trực: <span id="user-display" style="font-weight:bold; color:var(--accent);"></span>
             </p>
+            
             <div id="reader"></div>
+            
             <div class="manual-box">
                 <input type="text" id="manual-id" placeholder="Nhập mã thủ công...">
                 <button onclick="processCode(document.getElementById('manual-id').value)">TÌM</button>
@@ -149,12 +168,13 @@
 </div>
 
 <script>
+    // Link gốc Google Apps Script của bạn
     const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWhbVnxwDiPXk15Nr2cGyHfHgoRqQM4mCmIYGi0LbpiNrdOfQBcgc2JUWmhfSV04nnTg/exec';
 
     let loggedInUser = "";
     let userRole = "";
     let currentScannedCode = "";
-    let html5QrCode; // Đổi biến để dùng lõi trực tiếp
+    let html5QrcodeScanner; // Dùng lại bộ Scanner gốc có nút
 
     window.addEventListener('DOMContentLoaded', () => {
         const savedUser = localStorage.getItem('loggedInUser');
@@ -191,8 +211,6 @@
         document.getElementById('logout-section').style.display = 'block';
         document.getElementById('user-display').innerText = loggedInUser;
         if (userRole === 'admin') document.getElementById('admin-menu').style.display = 'flex';
-        
-        // Gọi thẳng lệnh khởi động Camera khi vừa vào view
         startScanner();
     }
 
@@ -210,27 +228,19 @@
     }
 
     function startScanner() {
-        // Dùng API trực tiếp ép trình duyệt mở camera sau
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            { facingMode: "environment" }, // Bắt buộc dùng camera sau
-            { fps: 15, qrbox: { width: 220, height: 220 } },
-            (decodedText) => { processCode(decodedText); }, // Khi có mã thì gọi hàm
-            (errorMessage) => { /* Bỏ qua các khung hình không thấy mã */ }
-        ).catch((err) => {
-            alert("Vui lòng Cấp Quyền sử dụng Camera cho trình duyệt để có thể quét mã!");
-            console.log("Camera error:", err);
-        });
+        // Khởi tạo bộ quét gốc có nút bấm
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 15, 
+            qrbox: {width: 220, height: 220},
+            rememberLastUsedCamera: true
+        }, false);
+        html5QrcodeScanner.render((text) => processCode(text), () => {});
     }
 
     function processCode(code) {
         if (!code || code.trim() === "") return;
         currentScannedCode = code.trim();
-        
-        // Tạm dừng camera khi đang xử lý
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.pause();
-        }
+        if (html5QrcodeScanner) html5QrcodeScanner.pause(true);
 
         fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
@@ -247,19 +257,19 @@
                 document.getElementById('confirm-modal').style.display = 'flex';
             } else {
                 alert(data.message);
-                if (html5QrCode) html5QrCode.resume();
+                if (html5QrcodeScanner) html5QrcodeScanner.resume();
             }
         })
         .catch(() => {
             alert("Lỗi kết nối!");
-            if (html5QrCode) html5QrCode.resume();
+            if (html5QrcodeScanner) html5QrcodeScanner.resume();
         });
     }
 
     function closeModal() {
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
-        if (html5QrCode) html5QrCode.resume(); // Bật lại camera
+        if (html5QrcodeScanner) html5QrcodeScanner.resume();
     }
 
     function submitAttendance() {
