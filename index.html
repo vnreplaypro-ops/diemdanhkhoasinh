@@ -4,300 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hệ Thống Điểm Danh Khóa Sinh</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { 
-            --primary: #2c3e50; 
-            --accent: #e67e22; 
-            --success: #27ae60; 
-            --danger: #e74c3c; 
+            --primary: #2c3e50; --accent: #e67e22; 
+            --success: #27ae60; --danger: #e74c3c; 
             --bg-color: #f0f2f5;
         }
-        
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: var(--bg-color); color: #333; display: flex; justify-content: center; min-height: 100vh; }
 
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            margin: 0; 
-            padding: 15px; 
-            background: var(--bg-color); 
-            color: #333; 
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .card { 
-            width: 100%;
-            max-width: 450px; 
-            background: white; 
-            padding: 24px; 
-            border-radius: 16px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.06); 
-            height: fit-content;
-        }
-
+        .card { width: 100%; max-width: 450px; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); height: fit-content; }
         h2, h3 { margin-top: 0; color: var(--primary); }
         
-        label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 5px;
-            display: block;
-            margin-top: 10px;
-        }
+        label { font-size: 14px; font-weight: 600; color: #555; margin-bottom: 5px; display: block; margin-top: 10px; }
+        select, input, button { width: 100%; padding: 14px; margin-bottom: 12px; font-size: 15px; border-radius: 10px; border: 1px solid #d1d5db; outline: none; transition: border-color 0.2s; }
+        select:focus, input:focus { border-color: var(--accent); }
 
-        select, input, button { 
-            width: 100%; 
-            padding: 14px; 
-            margin-bottom: 12px; 
-            font-size: 15px; 
-            border-radius: 10px; 
-            border: 1px solid #d1d5db; 
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        select:focus, input:focus {
-            border-color: var(--accent);
-        }
-
-        button { 
-            background: var(--accent); 
-            color: white; 
-            border: none; 
-            font-weight: bold; 
-            cursor: pointer; 
-            font-size: 16px;
-            transition: transform 0.1s, opacity 0.2s;
-            margin-top: 10px;
-        }
-
-        button:active { 
-            transform: scale(0.98);
-            opacity: 0.9; 
-        }
+        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: transform 0.1s, opacity 0.2s; margin-top: 10px; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
         
-        .admin-tabs { 
-            display: none; 
-            margin-bottom: 20px; 
-            background: #f1f3f5;
-            padding: 4px;
-            border-radius: 12px;
-        }
-
-        .tab-btn { 
-            background: transparent; 
-            color: #555; 
-            width: 49%; 
-            display: inline-block; 
-            margin: 0; 
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-        }
-
-        .tab-btn.active { 
-            background: white; 
-            color: var(--primary); 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
+        .admin-tabs { display: none; margin-bottom: 20px; background: #f1f3f5; padding: 4px; border-radius: 12px; }
+        .tab-btn { background: transparent; color: #555; width: 49%; display: inline-block; margin: 0; padding: 10px; border: none; border-radius: 8px; }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* STYLE CHO TAB CON BÊN TRONG BÁO CÁO */
+        .inner-tabs { display: flex; background: #e5e7eb; border-radius: 8px; padding: 4px; margin-bottom: 15px; }
+        .inner-tab-btn { flex: 1; background: transparent; border: none; padding: 8px; margin: 0; font-size: 14px; color: #555; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 600; }
+        .inner-tab-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .inner-tab-content { display: none; }
+        .inner-tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         #main-app, #report-view, #group-select-container { display: none; }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-top: 15px; border: 2px solid #e5e7eb; }
         
-        #reader { 
-            width: 100%; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            margin-top: 15px; 
-            border: 2px solid #e5e7eb;
-        }
-        
-        .manual-box { 
-            display: flex; 
-            gap: 8px; 
-            margin-top: 20px; 
-        }
-
+        .manual-box { display: flex; gap: 8px; margin-top: 20px; }
         .manual-box input { margin: 0; flex: 1; }
         .manual-box button { width: auto; white-space: nowrap; margin: 0; background: var(--primary); padding: 0 20px;}
         
-        .modal-overlay { 
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(0,0,0,0.55); 
-            backdrop-filter: blur(4px); 
-            z-index: 9999; 
-            justify-content: center; 
-            align-items: center; 
-        }
-
-        .modal-box { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 16px; 
-            width: 90%; 
-            max-width: 360px; 
-            text-align: left; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: popIn 0.2s ease-out;
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .modal-box h3 {
-            color: var(--success); 
-            border-bottom: 2px solid #f0f0f0; 
-            padding-bottom: 12px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
+        /* MODAL (POPUP) STYLE */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; }
+        .modal-box { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 360px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-box h3 { color: var(--success); border-bottom: 2px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 15px; text-align: center; }
         .modal-box p { margin: 10px 0; font-size: 15px; display: flex; justify-content: space-between;}
         .modal-box span { font-weight: bold; color: var(--primary); text-align: right; }
-        
-        .modal-actions {
-            display: flex; 
-            gap: 10px; 
-            margin-top: 25px;
-        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 25px; }
         .modal-actions button { margin: 0; padding: 12px; }
 
-        /* HIỆU ỨNG LOADING VÀ THÀNH CÔNG CỦA POPUP */
-        #status-indicator {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-            padding: 10px 0;
-        }
+        #status-indicator { display: none; text-align: center; margin-top: 20px; padding: 10px 0; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        .success-mark { display: none; font-size: 18px; font-weight: bold; animation: popIn 0.3s ease-out; margin-top: 15px; }
 
-        .spinner {
-            width: 40px; 
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-
-        .success-mark {
-            display: none;
-            color: var(--success);
-            font-size: 20px;
-            font-weight: bold;
-            animation: popIn 0.3s ease-out;
-        }
-
-        .grid-report { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            margin-top: 20px; 
-        }
-
-        .rep-item { 
-            background: #f8f9fa; 
-            padding: 15px; 
-            border-radius: 12px; 
-            border-left: 5px solid var(--primary); 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-
+        /* REPORT STYLES */
+        .grid-report { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .rep-item { background: #f8f9fa; padding: 15px; border-radius: 12px; border-left: 5px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .rep-item h4 { margin: 0 0 8px 0; font-size: 13px; color: #7f8c8d; }
         .rep-item p { margin: 0; font-size: 18px; font-weight: 800; color: var(--primary); }
         .rep-item.ok { border-left-color: var(--success); }
         .rep-item.err { border-left-color: var(--danger); }
 
-        .absent-wrapper { 
-            margin-top: 25px; 
-            text-align: left; 
-            background: #fff5f5; 
-            padding: 20px; 
-            border-radius: 12px; 
-            border: 1px solid #fbc4c4;
-        }
+        .report-wrapper { margin-top: 25px; text-align: left; padding: 20px; border-radius: 12px; }
+        .wrapper-late { background: #fff8e1; border: 1px solid #ffe082; }
+        .wrapper-absent { background: #fff5f5; border: 1px solid #fbc4c4; }
 
-        .absent-list { padding-left: 20px; margin: 12px 0 0 0; font-size: 15px;}
-        .absent-list li { margin-bottom: 15px; color: #2c3e50; line-height: 1.5; padding-bottom: 10px; border-bottom: 1px dashed #fad4d4;}
-        .absent-list li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
-        .absent-list a { color: var(--danger); font-weight: bold; text-decoration: none; vertical-align: middle;}
+        .data-list { padding-left: 20px; margin: 0; font-size: 15px;}
+        .data-list li { margin-bottom: 15px; color: #2c3e50; line-height: 1.5; padding-bottom: 10px; border-bottom: 1px dashed #ddd;}
+        .data-list li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+        .data-list a { color: var(--primary); font-weight: bold; text-decoration: none;}
         
-        .copy-btn { 
-            width: auto; 
-            display: inline-block; 
-            padding: 5px 10px; 
-            margin: 0 0 0 10px; 
-            font-size: 12px; 
-            background: #34495e; 
-            color: white; 
-            border-radius: 6px; 
-            vertical-align: middle;
-        }
-
-        .user-info-text {
-            font-size: 14px; 
-            color: #7f8c8d; 
-            margin-top: 0; 
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        /* THANH THÔNG BÁO ĐỒNG BỘ DỮ LIỆU */
-        .sync-banner {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #3498db;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            z-index: 9999;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        .copy-btn { width: auto; display: inline-block; padding: 5px 10px; margin: 0 0 0 10px; font-size: 12px; background: #34495e; color: white; border-radius: 6px; }
+        .user-info-text { font-size: 14px; color: #7f8c8d; margin-top: 0; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .sync-banner { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #3498db; color: white; text-align: center; padding: 10px; font-size: 14px; font-weight: bold; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-<div class="sync-banner" id="sync-banner">
-    Đang đồng bộ dữ liệu hệ thống... Vui lòng đợi giây lát!
-</div>
+<div class="sync-banner" id="sync-banner">Đang đồng bộ dữ liệu hệ thống... Vui lòng đợi giây lát!</div>
 
 <div class="card">
     <div id="login-section">
         <h2 style="text-align:center; color: var(--accent); margin-bottom: 25px;">ĐĂNG NHẬP</h2>
-        
         <label>Loại tài khoản:</label>
         <select id="account-type" onchange="toggleAccountType(this.value)">
             <option value="admin">Quản Trị Viên (Admin)</option>
-            <option value="trung_nhom">Trưởng Nhóm (8 Chúng)</option>
+            <option value="leader">Trưởng Nhóm (8 Chúng)</option>
         </select>
         
         <div id="group-select-container">
             <label>Chọn Chúng (Nhóm):</label>
             <select id="group-name">
-                <option value="BỒ ĐỀ">BỒ ĐỀ</option><option value="LIÊN HOA">LIÊN HOA</option>
-                <option value="LỤC HÒA">LỤC HÒA</option><option value="TỈNH THỨC">TỈNH THỨC</option>
-                <option value="TỪ BI">TỪ BI</option><option value="TRÍ TUỆ">TRÍ TUỆ</option>
-                <option value="VÔ NGÃ">VÔ NGÃ</option><option value="VỊ THA">VỊ THA</option>
+                <option value="BỒ ĐỀ">BỒ ĐỀ</option>
+                <option value="LIÊN HOA">LIÊN HOA</option>
+                <option value="LỤC HÒA">LỤC HÒA</option>
+                <option value="THIỆN TÂM">THIỆN TÂM</option>
+                <option value="TỈNH THỨC">TỈNH THỨC</option>
+                <option value="VỀ NGUỒN">VỀ NGUỒN</option>
+                <option value="HỶ XẢ">HỶ XẢ</option>
+                <option value="TỪ BI">TỪ BI</option>
+                <option value="VỊ THA">VỊ THA</option>
+                <option value="VÔ NGÃ">VÔ NGÃ</option>
             </select>
         </div>
         
@@ -306,7 +114,7 @@
         <button onclick="handleLogin()" style="margin-top: 20px;">VÀO HỆ THỐNG</button>
     </div>
 
-    <div class="admin-tabs" id="admin-menu">
+    <div class="admin-tabs" id="main-menu">
         <button class="tab-btn active" id="btn-tab-scan" onclick="switchTab('scan')">Quét Mã</button>
         <button class="tab-btn" id="btn-tab-rep" onclick="switchTab('report')">Báo Cáo</button>
     </div>
@@ -316,153 +124,174 @@
         <p class="user-info-text">Tài khoản: <span id="user-display" style="font-weight:bold; color:var(--accent);"></span></p>
         
         <div id="reader"></div>
-        
         <div class="manual-box">
             <input type="text" id="manual-id" placeholder="Nhập mã thủ công...">
             <button onclick="processCode(document.getElementById('manual-id').value)">Tìm</button>
         </div>
-        
         <button onclick="handleLogout()" style="background: white; color: var(--danger); border: 1px solid var(--danger); margin-top:30px;">Đăng Xuất</button>
     </div>
 
     <div id="report-view">
-        <h3 style="margin-bottom: 15px;">BÁO CÁO THỜI GIAN THỰC</h3>
-        <button onclick="loadAdminReport()" style="background:#3498db; margin-top: 0;">Cập nhật số liệu</button>
+        <h3 style="margin-bottom: 5px;">BÁO CÁO TỔNG HỢP</h3>
+        
+        <div id="admin-filter" style="display:none; margin-top: 15px;">
+            <label>Lọc xem theo Chúng:</label>
+            <select id="report-group-filter" onchange="renderReportUI()">
+                <option value="TỔNG CỘNG">-- TỔNG CỘNG TẤT CẢ --</option>
+                <option value="BỒ ĐỀ">BỒ ĐỀ</option>
+                <option value="LIÊN HOA">LIÊN HOA</option>
+                <option value="LỤC HÒA">LỤC HÒA</option>
+                <option value="THIỆN TÂM">THIỆN TÂM</option>
+                <option value="TỈNH THỨC">TỈNH THỨC</option>
+                <option value="VỀ NGUỒN">VỀ NGUỒN</option>
+                <option value="HỶ XẢ">HỶ XẢ</option>
+                <option value="TỪ BI">TỪ BI</option>
+                <option value="VỊ THA">VỊ THA</option>
+                <option value="VÔ NGÃ">VÔ NGÃ</option>
+            </select>
+        </div>
+
+        <button onclick="fetchReportData()" style="background:#3498db; margin-top: 10px;">Cập nhật dữ liệu mới nhất</button>
+        
+        <div id="admin-charts" style="display:none; margin-top: 25px; padding: 15px; border-radius: 12px; background: white; border: 1px solid #ddd;">
+            <h4 style="color:var(--primary); text-align:center; margin-top:0;">BIỂU ĐỒ THI ĐUA</h4>
+            <div class="inner-tabs">
+                <button class="inner-tab-btn btn-chart active" id="btn-chart-today" onclick="switchInnerTab('chart', 'today')">Hôm Nay</button>
+                <button class="inner-tab-btn btn-chart" id="btn-chart-multi" onclick="switchInnerTab('chart', 'multi')">Tích Lũy</button>
+            </div>
+            <div id="content-chart-today" class="inner-tab-content content-chart active">
+                <canvas id="chartToday"></canvas>
+            </div>
+            <div id="content-chart-multi" class="inner-tab-content content-chart">
+                <canvas id="chartMulti"></canvas>
+            </div>
+        </div>
+
+        <h4 style="margin: 25px 0 10px 0; color: #555; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 5px;">SỐ LIỆU TỔNG QUAN</h4>
         <div class="grid-report" id="report-data"></div>
-        <div id="absent-data"></div>
+
+        <div class="report-wrapper wrapper-late">
+            <h4 style="margin:0 0 15px 0; color:#e67e22;">DANH SÁCH ĐI MUỘN</h4>
+            <div class="inner-tabs">
+                <button class="inner-tab-btn btn-late active" id="btn-late-today" onclick="switchInnerTab('late', 'today')">Hôm Nay</button>
+                <button class="inner-tab-btn btn-late" id="btn-late-multi" onclick="switchInnerTab('late', 'multi')">Nhiều Ngày</button>
+            </div>
+            <div id="content-late-today" class="inner-tab-content content-late active">
+                <ol class="data-list" id="late-today-list"></ol>
+            </div>
+            <div id="content-late-multi" class="inner-tab-content content-late">
+                <ol class="data-list" id="late-multi-list"></ol>
+            </div>
+        </div>
+
+        <div class="report-wrapper wrapper-absent">
+            <h4 style="margin:0 0 15px 0; color:var(--danger);">DANH SÁCH VẮNG</h4>
+            <div class="inner-tabs">
+                <button class="inner-tab-btn btn-absent active" id="btn-absent-today" onclick="switchInnerTab('absent', 'today')">Hôm Nay</button>
+                <button class="inner-tab-btn btn-absent" id="btn-absent-multi" onclick="switchInnerTab('absent', 'multi')">Nhiều Ngày</button>
+            </div>
+            <div id="content-absent-today" class="inner-tab-content content-absent active">
+                <ol class="data-list" id="absent-today-list"></ol>
+            </div>
+            <div id="content-absent-multi" class="inner-tab-content content-absent">
+                <ol class="data-list" id="absent-multi-list"></ol>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <div class="modal-overlay" id="confirm-modal">
     <div class="modal-box">
         <h3>Thông Tin Khóa Sinh</h3>
-        
-        <div id="loading-info" style="text-align: center; padding: 15px 0; display: none;">
-            <div class="spinner"></div>
-            <p style="display: block; text-align: center; margin-top: 15px; color: var(--accent); font-weight: bold;">Đang xử lý mã QR...</p>
-        </div>
-
-        <div id="student-info" style="display: none;">
+        <div id="student-info">
             <p>Mã Số: <span id="m-ma"></span></p>
             <p>Họ Tên: <span id="m-ten" style="color:var(--accent); font-size:18px;"></span></p>
-            <p>Ngày Sinh: <span id="m-ns"></span></p>
             <p>Chúng: <span id="m-chung"></span></p>
         </div>
-        
-        <div class="modal-actions" id="modal-actions" style="display: none;">
+        <div class="modal-actions" id="modal-actions">
             <button onclick="cancelModal()" style="background:#f1f2f6; color:#576574;">HỦY</button>
             <button onclick="submitAttendance()" style="background:var(--success);">XÁC NHẬN</button>
         </div>
-
         <div id="status-indicator">
             <div class="spinner" id="spinner"></div>
-            <div class="success-mark" id="success-mark">✓ Đã ghi nhận thành công!</div>
+            <p id="saving-text" style="color:var(--accent); font-weight:bold; margin-top:15px; display:block;">Đang lưu về Sheet...</p>
+            <div class="success-mark" id="success-mark"></div>
         </div>
     </div>
 </div>
 
-<script>
-    // THAY LINK SCRIPT CỦA BẠN VÀO ĐÂY
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKZXNR_w9W0h5kLaDEC_iiUdMokJQnKG-8OexeElClUm74p2bTiMn58gzigMAOcU2hcQ/exec';
+<div class="modal-overlay" id="warning-modal">
+    <div class="modal-box" style="text-align: center;">
+        <div style="font-size: 45px; margin-bottom: 10px;">⚠️</div>
+        <h3 style="color: var(--danger); border: none; padding: 0; margin-bottom: 10px;">SAI CHÚNG</h3>
+        <p id="warning-text" style="display: block; font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: #444;"></p>
+        <button onclick="closeWarning()" style="background: var(--danger); width: 100%;">ĐÃ HIỂU</button>
+    </div>
+</div>
 
-    let loggedInUser = "";
-    let userRole = "";
-    let currentScannedCode = "";
-    let html5QrcodeScanner;
-    
-    let isProcessing = false; 
-    
-    // BIẾN CHO HỆ THỐNG CACHE VÀ LƯU NGẦM
-    let studentCache = {}; 
-    let unsyncedQueue = []; 
-    let isDataLoaded = false;
+<script>
+    // DÁN LINK GOOGLE SCRIPT MỚI VÀO ĐÂY
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXfHpEsR22Krs7nVXPEnuOYSVLp6oosBLgWhmOsYAtalkpbk79vm1q3B8Vif_bnNY-SQ/exec';
+
+    let loggedInUser = ""; let userRole = ""; let userGroup = ""; 
+    let currentScannedCode = ""; let html5QrcodeScanner;
+    let isProcessing = false; let isDataLoaded = false;
+    let studentCache = {}; let globalReportData = {}; 
+    let chartTodayObj, chartMultiObj;
 
     window.addEventListener('DOMContentLoaded', () => {
-        const savedUser = localStorage.getItem('loggedInUser');
-        const savedRole = localStorage.getItem('userRole');
-        
-        if (savedUser && savedRole) {
-            loggedInUser = savedUser;
-            userRole = savedRole;
+        if (localStorage.getItem('loggedInUser')) {
+            loggedInUser = localStorage.getItem('loggedInUser');
+            userRole = localStorage.getItem('userRole');
+            userGroup = localStorage.getItem('userGroup');
             
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
             document.getElementById('user-display').innerText = loggedInUser;
+            document.getElementById('main-menu').style.display = 'block';
             
-            if (userRole === 'admin') {
-                document.getElementById('admin-menu').style.display = 'block';
-            }
-            
-            // Tải dữ liệu Cache ngay lập tức
-            preloadData();
-            startScanner();
+            preloadData(); startScanner();
         }
     });
 
-    function toggleAccountType(val) {
-        document.getElementById('group-select-container').style.display = (val === 'admin') ? 'none' : 'block';
-    }
+    function toggleAccountType(val) { document.getElementById('group-select-container').style.display = (val === 'admin') ? 'none' : 'block'; }
 
     function handleLogin() {
         const type = document.getElementById('account-type').value;
         const pass = document.getElementById('password').value;
+        const gName = document.getElementById('group-name').value;
         
         if (type === 'admin') {
-            if (pass === '123456') {
-                userRole = 'admin'; loggedInUser = 'Ban Quản Trị';
-                document.getElementById('admin-menu').style.display = 'block';
-            } else { alert('Sai mật khẩu Admin!'); return; }
+            if (pass === '123456') { userRole = 'admin'; loggedInUser = 'Ban Quản Trị'; userGroup = 'TỔNG CỘNG'; } 
+            else { alert('Sai mật khẩu Admin!'); return; }
         } else {
-            if (pass === '12345') {
-                userRole = 'leader'; loggedInUser = "Trưởng nhóm " + document.getElementById('group-name').value;
-            } else { alert('Sai mật khẩu Trưởng nhóm!'); return; }
+            if (pass === '12345') { userRole = 'leader'; loggedInUser = "Trưởng nhóm " + gName; userGroup = gName; } 
+            else { alert('Sai mật khẩu Trưởng nhóm!'); return; }
         }
         
-        localStorage.setItem('loggedInUser', loggedInUser);
-        localStorage.setItem('userRole', userRole);
+        localStorage.setItem('loggedInUser', loggedInUser); localStorage.setItem('userRole', userRole); localStorage.setItem('userGroup', userGroup);
+        location.reload();
+    }
 
-        document.getElementById('login-section').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        document.getElementById('user-display').innerText = loggedInUser;
+    function handleLogout() { localStorage.clear(); location.reload(); }
+
+    // HÀM CHUYỂN TAB TRONG BÁO CÁO (CHART / LATE / ABSENT)
+    function switchInnerTab(group, type) {
+        document.querySelectorAll(`.btn-${group}`).forEach(el => el.classList.remove('active'));
+        document.querySelectorAll(`.content-${group}`).forEach(el => el.classList.remove('active'));
         
-        // Tải dữ liệu Cache ngay sau khi đăng nhập
-        preloadData();
-        startScanner();
+        document.getElementById(`btn-${group}-${type}`).classList.add('active');
+        document.getElementById(`content-${group}-${type}`).classList.add('active');
     }
 
-    function handleLogout() { 
-        localStorage.removeItem('loggedInUser');
-        localStorage.removeItem('userRole');
-        location.reload(); 
-    }
-
-    // TẢI TRƯỚC TOÀN BỘ DỮ LIỆU ĐỂ QUÉT OFFLINE
     function preloadData() {
         document.getElementById('sync-banner').style.display = 'block';
-        
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "getAll" }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        })
+        fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "getAll" }) })
         .then(res => res.json())
         .then(data => {
-            if(data.status === "success") {
-                studentCache = data.students; 
-                isDataLoaded = true;
-                document.getElementById('sync-banner').style.display = 'none';
-                console.log("Đã tải xong cache toàn bộ khóa sinh.");
-            } else {
-                alert("Lỗi tải danh sách khóa sinh: " + data.message);
-                document.getElementById('sync-banner').innerText = "Tải dữ liệu thất bại, vui lòng load lại trang!";
-                document.getElementById('sync-banner').style.background = "var(--danger)";
-            }
-        })
-        .catch(err => {
-            alert("Lỗi mạng khi đồng bộ dữ liệu. Vui lòng kiểm tra kết nối!");
-            document.getElementById('sync-banner').innerText = "Lỗi mạng, chưa thể tải dữ liệu!";
-            document.getElementById('sync-banner').style.background = "var(--danger)";
-        });
+            if(data.status === "success") { studentCache = data.students; isDataLoaded = true; document.getElementById('sync-banner').style.display = 'none'; }
+        }).catch(err => { document.getElementById('sync-banner').innerText = "Lỗi mạng!"; document.getElementById('sync-banner').style.background = "var(--danger)"; });
     }
 
     function switchTab(tab) {
@@ -470,175 +299,208 @@
         document.getElementById('btn-tab-rep').className = (tab === 'report') ? 'tab-btn active' : 'tab-btn';
         document.getElementById('main-app').style.display = (tab === 'scan') ? 'block' : 'none';
         document.getElementById('report-view').style.display = (tab === 'report') ? 'block' : 'none';
-        if (tab === 'report') loadAdminReport();
+        if (tab === 'report') fetchReportData();
     }
 
     function startScanner() {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 230, height: 230} }, false);
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 30, // Tăng tốc độ quét lên 30 khung hình/giây
+            qrbox: {width: 250, height: 250},
+            disableFlip: false, // Bỏ qua quét ảnh lật ngược để giảm tải CPU
+            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // CHỈ tập trung quét QR Code, giúp tốc độ nhận diện nhanh gấp nhiều lần
+        }, false);
         html5QrcodeScanner.render((text) => processCode(text), () => {});
     }
-
     function processCode(code) {
         if (isProcessing || !code || code.trim() === "") return;
-        
-        if (!isDataLoaded) {
-            alert("Vui lòng chờ vài giây để hệ thống tải dữ liệu xong trước khi quét!");
-            return;
-        }
+        if (!isDataLoaded) { alert("Đang tải dữ liệu. Xin chờ!"); return; }
 
-        isProcessing = true; 
-        currentScannedCode = code.trim();
-        
-        // KIỂM TRA NHANH TRONG CACHE (0 GIÂY)
+        isProcessing = true; currentScannedCode = code.trim();
         const student = studentCache[currentScannedCode];
 
         if (student) {
-            // Điền dữ liệu và bật Popup ngay lập tức
-            document.getElementById('m-ma').innerText = student.ma;
-            document.getElementById('m-ten').innerText = student.ten;
-
-            // Xử lý làm sạch ngày sinh (Cắt bỏ giờ/phút/giây)
-            let rawDate = String(student.ngaySinh || "");
-            let cleanDate = rawDate;
-
-            if (rawDate.includes("T")) {
-                // Xử lý nếu Google trả về dạng ISO (VD: 2010-05-15T00:00:00.000Z)
-                let datePart = rawDate.split("T")[0]; // Lấy phần "2010-05-15"
-                let p = datePart.split("-");
-                if (p.length === 3) cleanDate = p[2] + "/" + p[1] + "/" + p[0]; // Đảo lại thành DD/MM/YYYY
-            } else if (rawDate.includes(" ")) {
-                // Xử lý nếu định dạng Text Excel dư khoảng trắng (VD: "15/05/2010 00:00:00")
-                cleanDate = rawDate.split(" ")[0];
+            if (userRole === 'leader' && student.chung.toUpperCase() !== userGroup.toUpperCase()) {
+                document.getElementById('warning-text').innerHTML = `Khóa sinh <b>${student.ten}</b> thuộc <b style="color:var(--accent);">${student.chung}</b>.<br><br>Yêu cầu em về đúng chúng của mình để điểm danh!`;
+                document.getElementById('warning-modal').style.display = 'flex';
+                return; 
             }
 
-            document.getElementById('m-ns').innerText = cleanDate;
+            document.getElementById('m-ma').innerText = student.ma;
+            document.getElementById('m-ten').innerText = student.ten;
             document.getElementById('m-chung').innerText = student.chung;
 
             document.getElementById('confirm-modal').style.display = 'flex';
-            document.getElementById('loading-info').style.display = 'none';
             document.getElementById('student-info').style.display = 'block';
             document.getElementById('modal-actions').style.display = 'flex';
             document.getElementById('status-indicator').style.display = 'none';
         } else {
-            alert("Mã này không có trong hệ thống hoặc file lỗi!");
+            alert("Mã này không có trong hệ thống!");
             setTimeout(() => { isProcessing = false; }, 1000);
         }
+    }
+
+    function closeWarning() {
+        document.getElementById('warning-modal').style.display = 'none';
+        document.getElementById('manual-id').value = "";
+        setTimeout(() => { isProcessing = false; currentScannedCode = ""; }, 500);
     }
 
     function cancelModal() {
         document.getElementById('confirm-modal').style.display = 'none';
         document.getElementById('manual-id').value = "";
-        
-        setTimeout(() => {
-            isProcessing = false;
-            currentScannedCode = "";
-        }, 500);
+        setTimeout(() => { isProcessing = false; currentScannedCode = ""; }, 300);
     }
 
     function submitAttendance() {
         const qrToSave = currentScannedCode;
-        const user = loggedInUser;
+        document.getElementById('modal-actions').style.display = 'none';
+        document.getElementById('status-indicator').style.display = 'block';
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('saving-text').style.display = 'block';
+        document.getElementById('success-mark').style.display = 'none';
 
-        // 1. ĐÓNG MODAL VÀ XẢ KHÓA NGAY LẬP TỨC ĐỂ QUÉT NGƯỜI TIẾP THEO
-        document.getElementById('confirm-modal').style.display = 'none';
-        document.getElementById('manual-id').value = "";
-        
-        // Nghỉ 0.4s để tránh quét đúp người cũ
-        setTimeout(() => { 
-            isProcessing = false; 
-            currentScannedCode = "";
-        }, 400); 
-
-        // 2. CHẠY NGẦM FETCH ĐỂ LƯU DỮ LIỆU
         fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "confirm", qr: qrToSave, user: user }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        })
-        .then(res => res.json())
+            method: 'POST', body: JSON.stringify({ action: "confirm", qr: qrToSave })
+        }).then(res => res.json())
         .then(data => {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('saving-text').style.display = 'none';
             if(data.status === "success" || data.status === "already") {
-                console.log(`Đã lưu / Đã điểm danh: ${qrToSave}`);
+                document.getElementById('success-mark').innerText = "✓ " + data.message;
+                document.getElementById('success-mark').style.color = "var(--success)";
             } else {
-                console.error(`Lỗi khi lưu ${qrToSave}:`, data.message);
-                unsyncedQueue.push(qrToSave);
+                document.getElementById('success-mark').innerText = "⚠️ Lỗi: " + data.message;
+                document.getElementById('success-mark').style.color = "var(--danger)";
             }
-        })
-        .catch(err => {
-            console.error(`Rớt mạng, không thể lưu ${qrToSave}.`);
-            // Đẩy vào hàng chờ nếu mất mạng
-            unsyncedQueue.push(qrToSave);
-        });
-    }
-
-    function copyText(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Đã copy SĐT: " + text);
+            document.getElementById('success-mark').style.display = 'block';
+            setTimeout(cancelModal, 1500);
         }).catch(err => {
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert("Đã copy SĐT: " + text);
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('saving-text').style.display = 'none';
+            document.getElementById('success-mark').innerText = "✓ Đã lưu tạm thời";
+            document.getElementById('success-mark').style.display = 'block';
+            setTimeout(cancelModal, 1500);
         });
     }
 
-    function loadAdminReport() {
-        const repDiv = document.getElementById('report-data');
-        const absDiv = document.getElementById('absent-data');
-        repDiv.innerHTML = "<p style='grid-column:1/3; text-align:center;'>Đang tính toán số liệu...</p>";
-        absDiv.innerHTML = "";
-        
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "report" }),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        })
+    function copyText(text) { navigator.clipboard.writeText(text).then(() => { alert("Copy SĐT: " + text); }); }
+
+    function fetchReportData() {
+        document.getElementById('report-data').innerHTML = "<p style='grid-column:1/3; text-align:center;'>Đang tính toán số liệu...</p>";
+        fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "report" }) })
         .then(res => res.json())
         .then(data => {
-            if(data.status === "success") {
-                repDiv.innerHTML = `
-                    <div class="rep-item"><h4>Tổng Số Khóa Sinh</h4><p>${data.total} cháu</p></div>
-                    <div class="rep-item err"><h4>Tổng Số Đi Muộn</h4><p>${data.muon} cháu</p></div>
-                    <div class="rep-item ok"><h4>Đã Đến (Sáng)</h4><p>${data.den} (${data.pctDen}%)</p></div>
-                    <div class="rep-item err"><h4>Vắng (Sáng)</h4><p>${data.total - data.den} (${data.pctVang}%)</p></div>
-                    <div class="rep-item ok" style="grid-column: 1/3"><h4>Đã Về (Chiều)</h4><p>${data.ve} cháu (${data.pctVe}%)</p></div>
-                `;
+            if(data.status === "success") { globalReportData = data.data; renderReportUI(); renderCharts(); } 
+        });
+    }
 
-                let absentHtml = `
-                    <div class="absent-wrapper">
-                        <h4 style="margin:0 0 15px 0; color:var(--danger);">DANH SÁCH VẮNG (SÁNG):</h4>
-                        <ol class="absent-list">
-                `;
-                
-                if(data.absent && data.absent.length > 0) {
-                    data.absent.forEach(student => {
-                        let sdtFormatted = student.sdt ? String(student.sdt).trim() : "";
-                        if (sdtFormatted && !sdtFormatted.startsWith('0') && !sdtFormatted.startsWith('+')) {
-                            sdtFormatted = '0' + sdtFormatted;
-                        }
+    function renderReportUI() {
+        let filterGroup = userGroup;
+        if (userRole === 'admin') {
+            document.getElementById('admin-filter').style.display = 'block';
+            filterGroup = document.getElementById('report-group-filter').value;
+        }
 
-                        absentHtml += `
-                            <li>
-                                <strong>${student.ten}</strong> <br>
-                                <span style="font-size:13px; color:#7f8c8d;">Chúng: ${student.chung}</span> <br>
-                                Liên hệ: <a href="tel:${sdtFormatted}">${sdtFormatted}</a>
-                                <button class="copy-btn" onclick="copyText('${sdtFormatted}')">Copy</button>
-                            </li>
-                        `;
-                    });
-                } else {
-                    absentHtml += `<li style="border: none;">Thật tuyệt vời! Hôm nay không có ai vắng mặt.</li>`;
-                }
-                
-                absentHtml += `</ol></div>`;
-                absDiv.innerHTML = absentHtml;
+        let data = globalReportData[filterGroup];
+        if(!data) { document.getElementById('report-data').innerHTML = "<p style='grid-column:1/3;'>Chưa có dữ liệu.</p>"; return; }
 
-            } else { repDiv.innerHTML = `<p style='color:red; grid-column:1/3; text-align:center;'>${data.message}</p>`; }
-        })
-        .catch(err => { repDiv.innerHTML = "<p style='color:red; grid-column:1/3; text-align:center;'>Lỗi tải báo cáo</p>"; });
+        // SỐ LIỆU TỔNG QUAN
+        let pctDen = data.total > 0 ? ((data.today.den / data.total) * 100).toFixed(1) : 0;
+        let pctVang = data.total > 0 ? (((data.total - data.today.den) / data.total) * 100).toFixed(1) : 0;
+
+        document.getElementById('report-data').innerHTML = `
+            <div class="rep-item" style="grid-column: 1/3; background: #e3f2fd; border-left-color: #2196f3;">
+                <h4 style="color:#1565c0;">Đang xem báo cáo của:</h4><p>${filterGroup}</p>
+            </div>
+            <div class="rep-item"><h4>Tổng Khóa Sinh</h4><p>${data.total}</p></div>
+            <div class="rep-item err"><h4>Đi Muộn</h4><p>${data.today.muon}</p></div>
+            <div class="rep-item ok"><h4>Đã Đến</h4><p>${data.today.den} (${pctDen}%)</p></div>
+            <div class="rep-item err"><h4>Vắng</h4><p>${data.total - data.today.den} (${pctVang}%)</p></div>
+        `;
+
+        // ĐI MUỘN (HÔM NAY)
+        let lateTodayHtml = "";
+        if(data.today.lateList.length > 0) {
+            data.today.lateList.forEach(s => { lateTodayHtml += `<li><strong>${s.ten}</strong> - <span style="color:#e67e22;">${s.thoiGian}</span><br><span style="font-size:13px; color:#7f8c8d;">${filterGroup==="TỔNG CỘNG"?`Chúng: ${s.chung}`:""}</span></li>`; });
+        } else { lateTodayHtml = `<li style="border:none;">Tuyệt vời! Không có ai đi muộn hôm nay.</li>`; }
+        document.getElementById('late-today-list').innerHTML = lateTodayHtml;
+
+        // ĐI MUỘN (TÍCH LŨY)
+        let lateMultiHtml = "";
+        let lateArr = Object.values(data.multi.late).sort((a,b) => b.count - a.count);
+        if(lateArr.length > 0) {
+            lateArr.forEach(s => { lateMultiHtml += `<li><strong>${s.ten}</strong> - <strong style="color:#e67e22;">Đã muộn ${s.count} ngày</strong><br><span style="font-size:13px; color:#7f8c8d;">${filterGroup==="TỔNG CỘNG"?`Chúng: ${s.chung}`:""}</span></li>`; });
+        } else { lateMultiHtml = `<li style="border:none;">Chưa có ai đi muộn từ đầu khóa.</li>`; }
+        document.getElementById('late-multi-list').innerHTML = lateMultiHtml;
+
+        // VẮNG (HÔM NAY)
+        let absTodayHtml = "";
+        if(data.today.absent.length > 0) {
+            data.today.absent.forEach(s => { 
+                let sdt = (s.sdt && !s.sdt.toString().startsWith('0')) ? '0'+s.sdt : (s.sdt || "");
+                absTodayHtml += `<li><strong>${s.ten}</strong> <span style="font-size:13px; color:#7f8c8d;">${filterGroup==="TỔNG CỘNG"?`(${s.chung})`:""}</span><br>${sdt ? `LH: <a href="tel:${sdt}">${sdt}</a> <button class="copy-btn" onclick="copyText('${sdt}')">Copy</button>` : ""}</li>`; 
+            });
+        } else { absTodayHtml = `<li style="border:none;">Tuyệt vời! Không có ai vắng mặt hôm nay.</li>`; }
+        document.getElementById('absent-today-list').innerHTML = absTodayHtml;
+
+        // VẮNG (TÍCH LŨY)
+        let absMultiHtml = "";
+        let absArr = Object.values(data.multi.absent).sort((a,b) => b.count - a.count);
+        if(absArr.length > 0) {
+            absArr.forEach(s => { 
+                let sdt = (s.sdt && !s.sdt.toString().startsWith('0')) ? '0'+s.sdt : (s.sdt || "");
+                absMultiHtml += `<li><strong>${s.ten}</strong> - <strong style="color:var(--danger);">Đã vắng ${s.count} ngày</strong> <span style="font-size:13px; color:#7f8c8d;">${filterGroup==="TỔNG CỘNG"?`(${s.chung})`:""}</span><br>${sdt ? `LH: <a href="tel:${sdt}">${sdt}</a> <button class="copy-btn" onclick="copyText('${sdt}')">Copy</button>` : ""}</li>`; 
+            });
+        } else { absMultiHtml = `<li style="border:none;">Chưa có ai vắng mặt từ đầu khóa.</li>`; }
+        document.getElementById('absent-multi-list').innerHTML = absMultiHtml;
+    }
+
+    function renderCharts() {
+        if(userRole !== 'admin') return;
+        document.getElementById('admin-charts').style.display = 'block';
+
+        const groups = ["BỒ ĐỀ", "LIÊN HOA", "LỤC HÒA", "THIỆN TÂM", "TỈNH THỨC", "VỀ NGUỒN", "HỶ XẢ", "TỪ BI", "VỊ THA", "VÔ NGÃ"];
+        
+        // Data Hôm Nay
+        const todayAbs = groups.map(g => globalReportData[g] ? globalReportData[g].today.absent.length : 0);
+        const todayLate = groups.map(g => globalReportData[g] ? globalReportData[g].today.muon : 0);
+        const totalToday = todayAbs.map((val, idx) => val + todayLate[idx]);
+        const maxToday = Math.max(...totalToday);
+
+        // Highlight màu (Đậm nếu cao nhất, Nhạt nếu thấp hơn)
+        const bgAbsToday = todayAbs.map((v, i) => (totalToday[i] === maxToday && maxToday > 0) ? '#c0392b' : '#e74c3c66');
+        const bgLateToday = todayLate.map((v, i) => (totalToday[i] === maxToday && maxToday > 0) ? '#d35400' : '#f39c1266');
+
+        // Data Nhiều Ngày
+        const multiAbs = groups.map(g => globalReportData[g] ? Object.values(globalReportData[g].multi.absent).reduce((sum, i) => sum + i.count, 0) : 0);
+        const multiLate = groups.map(g => globalReportData[g] ? Object.values(globalReportData[g].multi.late).reduce((sum, i) => sum + i.count, 0) : 0);
+        const totalMulti = multiAbs.map((val, idx) => val + multiLate[idx]);
+        const maxMulti = Math.max(...totalMulti);
+
+        const bgAbsMulti = multiAbs.map((v, i) => (totalMulti[i] === maxMulti && maxMulti > 0) ? '#c0392b' : '#e74c3c66');
+        const bgLateMulti = multiLate.map((v, i) => (totalMulti[i] === maxMulti && maxMulti > 0) ? '#d35400' : '#f39c1266');
+
+        // Vẽ Chart Hôm Nay
+        if (chartTodayObj) chartTodayObj.destroy();
+        chartTodayObj = new Chart(document.getElementById('chartToday'), {
+            type: 'bar',
+            data: { labels: groups, datasets: [
+                { label: 'Số Vắng (Hôm Nay)', data: todayAbs, backgroundColor: bgAbsToday },
+                { label: 'Số Muộn (Hôm Nay)', data: todayLate, backgroundColor: bgLateToday }
+            ]},
+            options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+        });
+
+        // Vẽ Chart Nhiều Ngày
+        if (chartMultiObj) chartMultiObj.destroy();
+        chartMultiObj = new Chart(document.getElementById('chartMulti'), {
+            type: 'bar',
+            data: { labels: groups, datasets: [
+                { label: 'Tổng lượt Vắng (Nhiều ngày)', data: multiAbs, backgroundColor: bgAbsMulti },
+                { label: 'Tổng lượt Muộn (Nhiều ngày)', data: multiLate, backgroundColor: bgLateMulti }
+            ]},
+            options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+        });
     }
 </script>
 </body>
