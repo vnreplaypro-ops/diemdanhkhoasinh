@@ -48,6 +48,10 @@
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; }
         .modal-box { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 360px; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out; }
         @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
         .modal-box h3 { color: var(--success); border-bottom: 2px solid #f0f0f0; padding-bottom: 12px; margin-bottom: 15px; text-align: center; }
         .modal-box p { margin: 10px 0; font-size: 15px; display: flex; justify-content: space-between;}
         .modal-box span { font-weight: bold; color: var(--primary); text-align: right; }
@@ -215,7 +219,7 @@
         </div>
         <div id="status-indicator">
             <div class="spinner" id="spinner"></div>
-            <p id="saving-text" style="color:var(--accent); font-weight:bold; margin-top:15px; display:block;">Đang lưu về Sheet...</p>
+            <p id="saving-text" style="color:var(--accent); font-weight:bold; margin-top:15px; display:block;">Đang lưu thông tin...</p>
             <div class="success-mark" id="success-mark"></div>
         </div>
     </div>
@@ -331,8 +335,9 @@
 
             document.getElementById('confirm-modal').style.display = 'flex';
             document.getElementById('student-info').style.display = 'block';
-            document.getElementById('modal-actions').style.display = 'flex';
-            document.getElementById('status-indicator').style.display = 'none';
+            
+            // TỰ ĐỘNG CHẠY LƯU LUÔN MÀ KHÔNG CẦN CHỜ BẤM NÚT XÁC NHẬN
+            submitAttendance(); 
         } else {
             alert("Mã này không có trong hệ thống!");
             setTimeout(() => { isProcessing = false; }, 1000);
