@@ -6,7 +6,14 @@
     <title>Hệ Thống Điểm Danh Khóa Sinh</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    
     <style>
+        /* BẠN DÁN VÀO ĐÂY NHÉ (BÊN TRONG THẺ STYLE) */
+        .content-chart { 
+            height: 300px; /* Tăng chiều cao lên 500px */
+            position: relative; 
+            margin-top: 15px;
+        }
         :root { 
             --primary: #2c3e50; --accent: #e67e22; 
             --success: #27ae60; --danger: #e74c3c; 
@@ -236,7 +243,7 @@
 
 <script>
     // DÁN LINK GOOGLE SCRIPT MỚI VÀO ĐÂY
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXfHpEsR22Krs7nVXPEnuOYSVLp6oosBLgWhmOsYAtalkpbk79vm1q3B8Vif_bnNY-SQ/exec';
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxqvSP3gWugUWq5SJD1TSGU-b43HEMK81jDrGqSfcj2BOQcseRXFR01Rbf-6VT6-5TZQ/exec';
 
     let loggedInUser = ""; let userRole = ""; let userGroup = ""; 
     let currentScannedCode = ""; let html5QrcodeScanner;
@@ -486,6 +493,7 @@
         const bgLateMulti = multiLate.map((v, i) => (totalMulti[i] === maxMulti && maxMulti > 0) ? '#d35400' : '#f39c1266');
 
         // Vẽ Chart Hôm Nay
+
         if (chartTodayObj) chartTodayObj.destroy();
         chartTodayObj = new Chart(document.getElementById('chartToday'), {
             type: 'bar',
@@ -493,7 +501,14 @@
                 { label: 'Số Vắng (Hôm Nay)', data: todayAbs, backgroundColor: bgAbsToday },
                 { label: 'Số Muộn (Hôm Nay)', data: todayLate, backgroundColor: bgLateToday }
             ]},
-            options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, // Bắt buộc phải có dòng này để ăn chiều cao 500px ở CSS
+                scales: { 
+                    x: { stacked: false }, // Đổi thành false để tách thành cột đôi
+                    y: { stacked: false, beginAtZero: true } 
+                } 
+            }
         });
 
         // Vẽ Chart Nhiều Ngày
@@ -501,10 +516,17 @@
         chartMultiObj = new Chart(document.getElementById('chartMulti'), {
             type: 'bar',
             data: { labels: groups, datasets: [
-                { label: 'Tổng lượt Vắng (Nhiều ngày)', data: multiAbs, backgroundColor: bgAbsMulti },
-                { label: 'Tổng lượt Muộn (Nhiều ngày)', data: multiLate, backgroundColor: bgLateMulti }
+                { label: 'Tổng lượt Vắng', data: multiAbs, backgroundColor: bgAbsMulti },
+                { label: 'Tổng lượt Muộn', data: multiLate, backgroundColor: bgLateMulti }
             ]},
-            options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, // Tương tự biểu đồ trên
+                scales: { 
+                    x: { stacked: false }, // Tách cột đôi
+                    y: { stacked: false, beginAtZero: true } 
+                } 
+            }
         });
     }
 </script>
